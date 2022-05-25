@@ -23,7 +23,8 @@
 %   backrefs    - add back references in the Bibliography section
 %
 % For more info see `README.md`
-\documentclass[withindex,glossary]{cam-thesis}
+% \documentclass[withindex,glossary]{cam-thesis}
+\documentclass[withindex,glossary,secondyr]{cam-thesis}
 
 % Citations using numbers
 \usepackage[numbers]{natbib}
@@ -33,19 +34,18 @@
 %%
 
 %% The title of the thesis:
-\title{My dissertation title\\
-spanning two lines}
+\title{The Trustworthy Language\\of Self-Explainable Deep Learning}
 
 %% The full name of the author (e.g.: James Smith):
-\author{My Full Name}
+\author{Pietro Barbiero}
 
 %% College affiliation:
-\college{My College}
+\college{Clare College}
 
 %% College shield [optional]:
 % \collegeshield{CollegeShields/Christs}
 % \collegeshield{CollegeShields/Churchill}
-% \collegeshield{CollegeShields/Clare}
+\collegeshield{CollegeShields/Clare}
 % \collegeshield{CollegeShields/ClareHall}
 % \collegeshield{CollegeShields/CorpusChristi}
 % \collegeshield{CollegeShields/Darwin}
@@ -75,7 +75,7 @@ spanning two lines}
 % \collegeshield{CollegeShields/TrinityHall}
 % \collegeshield{CollegeShields/Wolfson}
 % \collegeshield{CollegeShields/CUniNoText}
-\collegeshield{CollegeShields/FitzwilliamRed}
+% \collegeshield{CollegeShields/FitzwilliamRed}
 
 %% Submission date [optional]:
 % \submissiondate{November, 2042}
@@ -96,7 +96,7 @@ spanning two lines}
 %% Abstract:
 %%
 \abstract{%
-  My abstract ...
+  Bla
 }
 
 
@@ -137,53 +137,72 @@ spanning two lines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Thesis body:
 %%
-\chapter{Introduction}
-This document was created with the help of a custom class file~\cite{example}. A
-{\em \LaTeX{} class file}\index{\LaTeX{} class file@LaTeX class file} is a file,
-which holds style information for a particular \LaTeX{} class\footnote{You can
-find more about classes at \url{http://www.ctan.org/pkg/clsguide}.}.
+\chapter{Progress}
+\textit{A report on progress made in relation to that described in the first-year PhD Proposal. This should include an indication of where the student is relative to their original timetable, discussion of any significant changes to the original ideas and their implications for the research as a whole.}
 
-There are some handy options for citing publications. It is possible to print just the year of some publication:~\citeyear{example}. It is also possible to print the name of the author(s) in the form ``Author et al.'': \citeauthor{example}. Finally, there is also a command to print the full list of authors of a publication: \citet*{example}.
+\chapter{Thesis Outline}
+\textit{In this chapter I provide a tentative chapter-by-chapter outline of the thesis. I include a tentative title for each of the main chapters with a brief paragraph summary of their content. Chapter summaries also acknowledge the work I have already completed and the work I still need to do during the third year (for example, ``chapter written'', ``chapter drafted'', ``research complete but not written'', ``research in progress'', ``research not started'').}
 
-This is an example glossary reference: \GLS{HOL}. \\
- 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{Introduction}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{Related Work}
+\begin{itemize}
+    \item Neural networks: MLPs, CNNs and GNNs
+    \item explainability~\citep{duran2021afraid,lo2020ethical,wachter2017counterfactual,gdpr2017,rudin2019stop}
+    \item concepts-based XAI~\citep{ghorbani2019towards,kim2018interpretability,shen2022trust}
+    \item limitations: weak metrics, no clear how concepts should be combined, accuracy-vs-interpretability trade-off, concept annotations are expensive
+\end{itemize}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{Concept Quality Metrics}
+\begin{itemize}
+    \item Existing metrics~\citep{yeh2020completeness}
+    \item Oracle purity~\citep{zarlenga2021quality}
+    \item Niching~\citep{zarlenga2021quality}
+\end{itemize}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{Concept Embedding Models}
+\begin{itemize}
+    \item Concept bottleneck models~\citep{koh2020concept}
+    \item CEMs~\citep{zarlenga2022concept} break the accuracy-vs-interpretability trade-off
+\end{itemize}
 
-\marginpar[Margin note.]{Margin par.}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{Logic Explained Networks}
+\begin{itemize}
+    \item LENs framework~\citep{ciravegna2021logic}
+    \item Entropy-based Logic Explanations of Neural Networks~\citep{barbiero2021entropy} provide excellent accuracies and explanations
+\end{itemize}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{Explainability by Design}
+\begin{itemize}
+    \item Encoding Concepts in Graph Neural Networks~\citep{magister2022encoding} discovers concepts in an unsupervised way (no need for expensive annotations!)
+    \item Encoding Concepts in any network
+    \item Multiple concepts
+\end{itemize}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{The ``PyTorch, Explain!'' Library}
 
-\section{My Section}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{Applications}
+\begin{itemize}
+    \item asthma
+    \item down syndrome
+    \item digital twin
+    \item automated reasoning
+\end{itemize}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\chapter{Timetable}
+\textit{A timetable that schedules the remaining work and indicates when the draft and final versions of the thesis will be produced.}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\chapter{Papers}
+\textit{A list of any papers published (with URLs so that the assessors can read the papers), a list of any papers in press, submitted, or in preparation, and a list of any presentations given, whether or not the presentation is associated with a paper.}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
 
 

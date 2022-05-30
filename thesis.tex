@@ -34,7 +34,7 @@
 %%
 
 %% The title of the thesis:
-\title{The Trustworthy Language\\of Self-Explainable Deep Learning}
+\title{Concept-Aware Learning}
 
 %% The full name of the author (e.g.: James Smith):
 \author{Pietro Barbiero}
@@ -144,49 +144,59 @@
 \textit{In this chapter I provide a tentative chapter-by-chapter outline of the thesis. I include a tentative title for each of the main chapters with a brief paragraph summary of their content. Chapter summaries also acknowledge the work I have already completed and the work I still need to do during the third year (for example, ``chapter written'', ``chapter drafted'', ``research complete but not written'', ``research in progress'', ``research not started'').}
 
 \section{Introduction}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low. Risks: low.}
+
+I will start my thesis with an overview of the state of the art of AI in research and companies and the potential impact of this field on humankind in the next decades. Next, I will discuss the current limitations and knowledge gaps which question the practical deployment of AI in high-stakes decision settings. I will conclude this chapter with an overview of my work describing how it advances the field AI and it contributes to a fairer and safer interaction with humankind.
 
 \section{Related Work}
-\begin{itemize}
-    \item Neural networks: MLPs, CNNs and GNNs
-    \item explainability~\citep{duran2021afraid,lo2020ethical,wachter2017counterfactual,gdpr2017,rudin2019stop}
-    \item concepts-based XAI~\citep{ghorbani2019towards,kim2018interpretability,shen2022trust}
-    \item limitations: weak metrics, no clear how concepts should be combined, accuracy-vs-interpretability trade-off, concept annotations are expensive
-\end{itemize}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
 
-\section{Concept Quality Metrics}
-\begin{itemize}
-    \item Existing metrics~\citep{yeh2020completeness}
-    \item Oracle purity~\citep{zarlenga2021quality}
-    \item Niching~\citep{zarlenga2021quality}
-\end{itemize}
+In the first part of the chapter I will bring the reader in the amazing field of deep learning. I will first provide an overview of the field, give appropriate definitions,  notations, and describe the details of architectures and learning algorithms. I will use this overview as a basis to demonstrate with simple examples why humans do not stand a chance in understanding what deep learning models learn. I will then illustrate the ethical repercussions of the opaqueness of such models which prevent their fair and safe deployment. 
+
+In the second part of the chapter I will describe the main approaches for explaining deep learning models and for designing more transparent modules~\citep{duran2021afraid,lo2020ethical,wachter2017counterfactual,gdpr2017,rudin2019stop} with specific details on robust and philosophically-/psychologically-grounded methods such as concept-based approachs~\citep{ghorbani2019towards,kim2018interpretability,shen2022trust}. I will then expose the main limitations of explainable AI and the current grand challenges. I will focus with more attention on the weaknesses my work aims at addressing, including: the lack of clear metrics for concept-based approaches, the lack of differentiable methods for mimicking human biases in using concepts for decision making, the accuracy-vs-interpretability trade-off of explainable AI methods, and the need for expensive manual annotations for differentiable concept-based approaches.
 
 
-\section{Concept Embedding Models}
-\begin{itemize}
-    \item Concept bottleneck models~\citep{koh2020concept}
-    \item CEMs~\citep{zarlenga2022concept} break the accuracy-vs-interpretability trade-off
-\end{itemize}
+\section{Concepts for Logic Explanations}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+In this chapter I will explain how concepts can be used to train more interpretable models. In particular, I will focus on my contributions in inventing Logic Explained Networks (LENs)~\citep{ciravegna2021logic}, a family of concept-based models providing first-order logic explanations for their predictions. I will describe LENs main architectures, learning paradigms, and logic rule extraction algorithms~\citep{barbiero2021entropy}. I will conclude the chapter showcasing LENs on a set of synthetic and real-world experiments demonstrating how LENs can provide highly accurate explanations with classification performances close to state-of-the-art models.
 
 
-\section{Logic Explained Networks}
-\begin{itemize}
-    \item LENs framework~\citep{ciravegna2021logic}
-    \item Entropy-based Logic Explanations of Neural Networks~\citep{barbiero2021entropy} provide excellent accuracies and explanations
-\end{itemize}
+\section{Beyond the Accuracy-vs-Interpretability Trade-Off}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
 
+In this chapter I will illustrate how concepts can be used to train interpretable models outperforming their non-interpretable equivalents in terms of raw task performance. In particular, I will focus on my contributions in inventing Concept Embedding Models (CEMs)~\citep{zarlenga2022concept} which are now the state of the art of supervised concept-based models. I will describe CEMs architectures and learning paradigms. I will also discuss how CEMs support effective human interactions through learnt concepts highlighting how these interactions can increase both model performances and human trust in the model~\citep{shen2022trust}. I will conclude the chapter demonstrating how CEMs outperform equivalent non-interpretable architectures and state-of-the-art concept-based models on synthetic and real-world datasets.
 
-\section{Explainability by Design}
+\section{Concept Discovery}
+\textbf{Research: in progress. Status: drafted. Difficulty: medium. Priority: high.}
+
+In this chapter I will illustrate how to make models ``aware'' of concepts they discover during training eliminating the need for expensive (and manual) concept annotations. 
+
 \begin{itemize}
     \item Encoding Concepts in Graph Neural Networks~\citep{magister2022encoding} discovers concepts in an unsupervised way (no need for expensive annotations!)
     \item Encoding Concepts in any network
     \item Multiple concepts
 \end{itemize}
 
+\section{Concept Quality}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+\begin{itemize}
+    \item Existing metrics~\citep{yeh2020completeness}
+    \item Oracle purity~\citep{zarlenga2021quality}
+    \item Niching~\citep{zarlenga2021quality}
+\end{itemize}
+
+\section{Explainability By Design}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
 
 \section{The ``PyTorch, Explain!'' Library}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
 
 
 \section{Applications}
+\textbf{Research: in progress. Status: drafted. Difficulty: medium. Priority: medium.}
 \begin{itemize}
     \item asthma
     \item down syndrome

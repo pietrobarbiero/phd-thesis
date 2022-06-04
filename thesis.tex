@@ -28,6 +28,12 @@
 
 % Citations using numbers
 \usepackage[numbers]{natbib}
+\usepackage{bibentry}
+\usepackage{url}
+
+
+\bibliographystyle{plainnat}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Thesis meta-information
@@ -151,7 +157,7 @@ I will start my thesis with an overview of the state of the art of AI in researc
 \section{Related Work}
 \textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
 
-In the first part of the chapter I will bring the reader in the amazing field of deep learning. I will first provide an overview of the field, give appropriate definitions,  notations, and describe the details of architectures and learning algorithms. I will use this overview as a basis to demonstrate with simple examples why humans do not stand a chance in understanding what deep learning models learn. I will then illustrate the ethical repercussions of the opaqueness of such models which prevent their fair and safe deployment. 
+In the first part of the chapter I will bring the reader in the amazing field of deep learning. I will first provide an overview of the field, give appropriate definitions, introduce the notation, and describe the details of architectures and learning algorithms. I will use this overview as a basis to demonstrate with simple examples why humans do not stand a chance in understanding what deep learning models learn. I will then illustrate the ethical repercussions of the opaqueness of such models which prevent their fair and safe deployment. 
 
 In the second part of the chapter I will describe the main approaches for explaining deep learning models and for designing more transparent modules~\citep{duran2021afraid,lo2020ethical,wachter2017counterfactual,gdpr2017,rudin2019stop} with specific details on robust and philosophically-/psychologically-grounded methods such as concept-based approachs~\citep{ghorbani2019towards,kim2018interpretability,shen2022trust}. I will then expose the main limitations of explainable AI and the current grand challenges. I will focus with more attention on the weaknesses my work aims at addressing, including: the lack of clear metrics for concept-based approaches, the lack of differentiable methods for mimicking human biases in using concepts for decision making, the accuracy-vs-interpretability trade-off of explainable AI methods, and the need for expensive manual annotations for differentiable concept-based approaches.
 
@@ -167,53 +173,136 @@ In this chapter I will explain how concepts can be used to train more interpreta
 
 In this chapter I will illustrate how concepts can be used to train interpretable models outperforming their non-interpretable equivalents in terms of raw task performance. In particular, I will focus on my contributions in inventing Concept Embedding Models (CEMs)~\citep{zarlenga2022concept} which are now the state of the art of supervised concept-based models. I will describe CEMs architectures and learning paradigms. I will also discuss how CEMs support effective human interactions through learnt concepts highlighting how these interactions can increase both model performances and human trust in the model~\citep{shen2022trust}. I will conclude the chapter demonstrating how CEMs outperform equivalent non-interpretable architectures and state-of-the-art concept-based models on synthetic and real-world datasets.
 
-\section{Concept Discovery}
+\section{Robust Concept Discovery}
 \textbf{Research: in progress. Status: drafted. Difficulty: medium. Priority: high.}
 
-In this chapter I will illustrate how to make models ``aware'' of concepts they discover during training eliminating the need for expensive (and manual) concept annotations. 
-
-\begin{itemize}
-    \item Encoding Concepts in Graph Neural Networks~\citep{magister2022encoding} discovers concepts in an unsupervised way (no need for expensive annotations!)
-    \item Encoding Concepts in any network
-    \item Multiple concepts
-\end{itemize}
+In this chapter I will illustrate how to make models ``aware'' of concepts they discover during training eliminating the need for expensive (and manual) concept annotations. I will first describe how to make networks learn concept encodings without using any concept label during training. Next I will show how to avoid \textit{shortcut learning}~\citep{geirhos2020shortcut} which can prevent the network to learn a ``complete'' and robust concept representation. I have already obtained preliminary results on graph neural networks~\citep{magister2022encoding} which I submitted to the Neural Information and Processing Systems conference. In the next few months I will focus on extending the approach to other common architectures such as convolutional networks. I will conclude the chapter showing the results on real-world settings comparing supervised and unsupervised concept learning methods.
 
 \section{Concept Quality}
 \textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
 
-\begin{itemize}
-    \item Existing metrics~\citep{yeh2020completeness}
-    \item Oracle purity~\citep{zarlenga2021quality}
-    \item Niching~\citep{zarlenga2021quality}
-\end{itemize}
-
-\section{Explainability By Design}
-\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+In this chapter I will discuss how to measure the quality of concept representations. In particular I will focus on my contribution in inventing the niche impurity score~\citep{zarlenga2021quality} which generalizes concept completeness~\citep{yeh2020completeness} to concept subsets. I will demonstrate how this metric is computationally efficient and does not require concept labels thus making it applicable in real-world supervised and unsupervised scenarios. I will conclude the chapter with experiments showing how the niche impurity score can be used in practice to evaluate the robustness of concept representations generated by state-of-the-art supervised and unsupervised concept learning methods.
 
 
 \section{The ``PyTorch, Explain!'' Library}
 \textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
 
+In this chapter I will illustrate the ``PyTorch, Explain!'' library, a free and open source python package which I developed and maintained during the PhD. The library contains all the advances I contributed to, including neural modules, metrics, dataset, and experiments. In this chapter I will explain the structure of the library and how to use it from installing the package to reproducing the experiments, from using existing modules in different scenarios to contributing to the codebase.
 
-\section{Applications}
+
+\section{Applications to Medical Digital Twins}
 \textbf{Research: in progress. Status: drafted. Difficulty: medium. Priority: medium.}
-\begin{itemize}
-    \item asthma
-    \item down syndrome
-    \item digital twin
-    \item automated reasoning
-\end{itemize}
 
+In this chapter I will showcase how my inventions significantly improved medical digital twin models~\citep{laubenbacher2021using}. First, I will descibe existing digital twin approaches in medicine and the main challenges of the field. Next, I will demonstrate how concept-based neural models can significantly improve the flexibility and robustness of existing equation-based approaches. In particular I will show how concept-based models allow the discovery of multi-omic patterns explaining drug responses in asthma and down syndrome.
+
+
+\section{Conclusion}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+I will conclude my thesis with a summary of my inventions. I will then discuss the impact of my contributions to the deep learning field as well as to broader research communities.
 
 
 
 \chapter{Timetable}
 \textit{A timetable that schedules the remaining work and indicates when the draft and final versions of the thesis will be produced.}
 
+
+\section{Objectives}
+My research objectives for rest of my Ph.D. are:
+\begin{itemize}
+    \item Extend the differentiable concept discovery technique to all neural architectures.
+    \item Limit shortcut learning in concept-based models.
+    \item Write the thesis.
+\end{itemize}
+
+
+\section{Timeline}
+
+\paragraph{Summer 2022 (July-September)}
+\begin{itemize}
+    \item Work on NeurIPS reviews.
+    \item Extend differentiable concept discovery to CNNs and KGEs.
+	\item Experiment different solutions to limit shortcut learning.
+\end{itemize}
+\textbf{Milestone(s): preliminary results on CNNs and KGEs.}
+
+\paragraph{Michaelmas 2021 (October-December)}
+\begin{itemize}
+	\item Extend differentiable concept discovery to transformers.
+	\item Fine-tune shortcut learning solutions.
+	\item Draft the thesis.
+\end{itemize}
+\textbf{Milestone(s): preliminary results on transformers.}
+
+\paragraph{Lent 2022 (January-March)}
+\begin{itemize}
+    \item Ask feedback on thesis draft.
+    \item Extend the experiments on concept discovery and shortcut learning to real-world scenarios.
+\end{itemize}
+\textbf{Milestone(s): real-world tests.}
+
+\paragraph{Easter 2022 (April-June)}
+\begin{itemize}
+    \item Refine implementations.
+    \item Write up and submit manuscript(s) to appropriate venue.
+\end{itemize}
+\textbf{Milestone(s): submit manuscript(s).}
+
+\paragraph{Summer 2022 (July-September)}
+\begin{itemize}
+    \item Improve thesis.
+    \item Work on the reviews of submitted manuscript(s).
+\end{itemize}
+\textbf{Milestone(s): submit thesis final version.}
+
+
+
 \chapter{Papers}
+
 \textit{A list of any papers published (with URLs so that the assessors can read the papers), a list of any papers in press, submitted, or in preparation, and a list of any presentations given, whether or not the presentation is associated with a paper.}
 
+\section{Concepts for Logic Explanations}
+\nobibliography*
+\bibentry{ciravegna2021logic}
 
+\bibentry{barbiero2021entropy}
+
+
+\section{Beyond the Accuracy-vs-Interpretability Trade-Off}
+\nobibliography*
+\bibentry{zarlenga2022concept}
+
+
+\section{Robust Concept Discovery}
+\nobibliography*
+\bibentry{magister2022encoding}
+
+
+\section{Concept Quality}
+\nobibliography*
+\bibentry{zarlenga2021quality}
+
+
+\section{The ``Pytorch, Explain!'' Library}
+\nobibliography*
+\bibentry{barbiero2021pytorch}
+
+
+\section{Applications to Medical Digital Twins}
+\nobibliography*
+\bibentry{barbiero2021graph}
+
+
+\section{Others}
+\nobibliography*
+
+\bibentry{barbiero2020modeling}
+
+\bibentry{barbiero2020computational}
+
+\bibentry{georgiev2021algorithmic}
+
+\bibentry{barbiero2021predictable}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -227,8 +316,8 @@ In this chapter I will illustrate how to make models ``aware'' of concepts they 
 \cleardoublepage
 \phantomsection
 \addcontentsline{toc}{chapter}{References}
-\bibliographystyle{plainnat}
-\bibliography{thesis}
+%\bibliographystyle{plainnat}
+\bibliography{thesis.bib}
 
 
 
@@ -236,10 +325,10 @@ In this chapter I will illustrate how to make models ``aware'' of concepts they 
 %% Appendix:
 %%
 
-\appendix
-
-\chapter{Extra Information}
-Some more text ...
+%\appendix
+%
+%\chapter{Extra Information}
+%Some more text ...
 
 
 

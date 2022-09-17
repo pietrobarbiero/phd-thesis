@@ -24,7 +24,7 @@
 %
 % For more info see `README.md`
 % \documentclass[withindex,glossary]{cam-thesis}
-\documentclass[withindex,glossary,secondyr]{cam-thesis}
+\documentclass[withindex,glossary]{cam-thesis}
 
 % Citations using numbers
 \usepackage[numbers]{natbib}
@@ -40,7 +40,7 @@
 %%
 
 %% The title of the thesis:
-\title{Concept-Aware Learning}
+\title{Interactive Concept-Aware Learning\\or\\Beyond the Accuracy-Explainability Trade-Off}
 
 %% The full name of the author (e.g.: James Smith):
 \author{Pietro Barbiero}
@@ -97,32 +97,63 @@
 \keywords{one two three}
 
 
+% too long, , 1 liner
+% P1: open problem, 
+% P2: current solutions -> problem remains
+% P3: research questions (reporting on completed work)
+%   - max 2 questions
+%   - key innovations
+% LENS: sparse attention mechanism for concepts -> predictions + truth table (logic) -> explainability by design
+% CEM: concept embeddings -> break Acc-vs-Expl trade-off
+% how do you measure?
+% when we don't have labels?
+% gaining interpretability without sacrificing accuracy
+
+% remind story at the beginning and end of each chapter
+% abstract: 1 page long
+% write asbtract first
+% write core chapters second
+% chapter 2: highlight gaps + concepts ~20% + assume DL
+% 
+% ask x viva to check: story + what to do with mix pubs
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Abstract:
 %%
-%\abstract{%
-%  
-%}
+\abstract{%
+% The opaque reasoning of neural networks induces a lack of human trust.
+Human trust in deep neural networks is currently an open problem as their decision process is opaque. 
+Current solutions addressing this problem either (i) provide post-hoc, qualitative, and local explanations, or (ii) increase models' transparency undermining their accuracy.
+To address these limitations, in this work I demonstrated how to design ``explainable-by-design'' neural models providing quantitative and global explanations without sacrificing accuracy. My key innovations enabling this progress were (i) a sparse attention mechanism and (ii) a high-dimensional representation for concepts learnt during training. On one side, the sparse attention mechanism allowed concept bottleneck models to solve each task using a small subset of relevant concepts and to learn simple logic-based explanations at train time. On the other side, the high-dimensional representation of concepts broke the information bottleneck of these concept-based models allowing them to gain accuracy without sacrificing interpretability. To make the proposed approaches more general, I devised an unsupervised concept layer which reduced training costs and allowed to train these models in absence of concept labels. As existing metrics were not always directly applicable, I proposed new performance scores to validate the impact of my innovations and to compare them with the current state of the art. The results of my experiments demonstrated how the proposed approaches significantly outperformed state-of-the-art models in predictive performance while providing accurate global explanations, thus breaking the current accuracy-vs-explainability trade-off and laying the foundations for human trust in deep learning.
+}
+
+% current limitations/knowledge gaps in XAI
+% - accuracy and explainability
+%   - visual (qualitative), local (instance-based), low-level (input-based), and post-hoc explanations
+%   - interpretable models make accuracy worse (trade-off)
+% - concepts make explanations more stable, but (1) require (expensive) annotations, and (2) do not solve the other issues
+% my goals are
+% - build models which are (a) more accurate and (b) more trustworthy than current models
+% - provide models which (a) are explainable-by-design (i.e., they do not require a post-hoc external XAI method), (b) provide quantitative, global, and concept-based (high-level) explanations humans can easily understand and interact with
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Acknowledgements:
 %%
-\acknowledgements{%
-  My acknowledgements ...
-}
+% \acknowledgements{%
+%   My acknowledgements ...
+% }
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Glossary [optional]:
 %%
-\newglossaryentry{HOL}{
-    name=HOL,
-    description={Higher-order logic}
-}
+% \newglossaryentry{HOL}{
+%     name=HOL,
+%     description={Higher-order logic}
+% }
 
 
 
@@ -143,82 +174,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Thesis body:
 %%
-\chapter{Progress}
-\textit{A report on progress made in relation to that described in the first-year PhD Proposal. This should include an indication of where the student is relative to their original timetable, discussion of any significant changes to the original ideas and their implications for the research as a whole.}
-
-In my first Ph.D. year I analyzed the explainable AI (XAI) literature looking for the main knowledge gaps. According to my analysis state-of-the-art XAI methods: (i) were limited to local (instance-based) explanations, (ii) provided brittle and qualitative explanations, or (iii) needed to sacrifice prediction performances on challenging tasks. During the first year of Ph.D. I addressed these knowledge gaps improving state-of-the-art concept-based models~\citep{ghorbani2019towards,kim2018interpretability}. In particular, I contibuted to the invention of Logic Explained Networks (LENs)~\citep{ciravegna2021logic,barbiero2021entropy}, explainable-by-design concept-based architectures providing robust first-order logic logic explanations for their predictions. In my first-year Ph.D. Proposal I also suggested a few preliminary research directions to extend and improve explainable-by-design concept-based architectures.
-
-In my second year of Ph.D. I further analyzed the main gaps of explainable-by-design concept-based architectures preventing their deployment on a large scale, following the suggestions and feedback I received for my first-year viva. I identified three main issues: (i) explainable-by-design architectures did not provide any advantage over their black-box equivalents in terms of raw prediction performance, (ii) existing metrics to evaluate the quality of concept representations were unefficient or based on unrealistic assumptions, and (iii) robust concept-based models required expensive concept annotations for training. During my second year I addressed these knowledge gaps by: (i) contributing to the invention of Concept Embedding Models~\citep{zarlenga2022concept}, explainable-by-design architectures outperforming their black-box equivalents in terms of raw prediction accuracy, (ii) proposing two novel metrics~\citep{zarlenga2021quality,zarlenga2022concept} generalizing and relaxing the assumptions of existing scores measuring the quality of concept representations, and (iii) devising a concept encoding strategy to make graph neural networks aware of concepts they discover in an unsupervised way~\citep{magister2022encoding}.
-
-In summary, in my first two years of Ph.D. I demonstrated how the explainable-by-design architectures I contributed to provide robust trust certificates to their users~\citep{shen2022trust}. More specifically the invented models consistently outperform exiting black-box models in terms of raw prediction performance as well as in terms of quality and stability of their explanations. My plan for the last year of Ph.D. is to extend the unsupervised concept encoding strategy to embrace all the most common architectures. This will allow cutting the expenses for the adoption of concept-based models in different domains. Finally, I will conclude my thesis demonstrating the applicability of  the proposed concept-based models in high-stakes scenarios such as modeling medical digital twins.
-
-
-
-
-
-\chapter{Thesis Outline}
-\textit{In this chapter I provide a tentative chapter-by-chapter outline of the thesis. I include a tentative title for each of the main chapters with a brief paragraph summary of their content. Chapter summaries also acknowledge the work I have already completed and the work I still need to do during the third year (for example, ``chapter written'', ``chapter drafted'', ``research complete but not written'', ``research in progress'', ``research not started'').}
-
-\section{Introduction}
-\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low. Risks: low.}
-
-I will start my thesis with an overview of the state of the art of AI in research and companies and the potential impact of this field on humankind in the next decades. Next, I will discuss the current limitations and knowledge gaps which question the practical deployment of AI in high-stakes decision settings. I will conclude this chapter with an overview of my work describing how it advances the field AI and it contributes to a fairer and safer interaction with humankind.
-
-\section{Related Work}
-\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
-
-In the first part of the chapter I will bring the reader in the amazing field of deep learning. I will first provide an overview of the field, give appropriate definitions, introduce the notation, and describe the details of architectures and learning algorithms. I will use this overview as a basis to demonstrate with simple examples why humans do not stand a chance in understanding what deep learning models learn. I will then illustrate the ethical repercussions of the opaqueness of such models which prevent their fair and safe deployment. 
-
-In the second part of the chapter I will describe the main approaches for explaining deep learning models and for designing more transparent modules~\citep{duran2021afraid,lo2020ethical,wachter2017counterfactual,gdpr2017,rudin2019stop} with specific details on robust and philosophically-/psychologically-grounded methods such as concept-based approachs~\citep{ghorbani2019towards,kim2018interpretability,shen2022trust}. I will then expose the main limitations of explainable AI and the current grand challenges. I will focus with more attention on the weaknesses my work aims at addressing, including: the lack of clear metrics for concept-based approaches, the lack of differentiable methods for mimicking human biases in using concepts for decision making, the accuracy-vs-interpretability trade-off of explainable AI methods, and the need for expensive manual annotations for differentiable concept-based approaches.
-
-
-\section{Concepts for Logic Explanations}
-\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
-
-In this chapter I will explain how concepts can be used to train more interpretable models. In particular, I will focus on my contributions in inventing Logic Explained Networks (LENs)~\citep{ciravegna2021logic}, a family of concept-based models providing first-order logic explanations for their predictions. I will describe LENs main architectures, learning paradigms, and logic rule extraction algorithms~\citep{barbiero2021entropy}. I will conclude the chapter showcasing LENs on a set of synthetic and real-world experiments demonstrating how LENs can provide highly accurate explanations with classification performances close to state-of-the-art models.
-
-
-\section{Beyond the Accuracy-vs-Interpretability Trade-Off}
-\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
-
-In this chapter I will illustrate how concepts can be used to train interpretable models outperforming their non-interpretable equivalents in terms of raw task performance. In particular, I will focus on my contributions in inventing Concept Embedding Models (CEMs)~\citep{zarlenga2022concept} which are now the state of the art of supervised concept-based models. I will describe CEMs architectures and learning paradigms. I will also discuss how CEMs support effective human interactions through learnt concepts highlighting how these interactions can increase both model performances and human trust in the model~\citep{shen2022trust}. I will conclude the chapter demonstrating how CEMs outperform equivalent non-interpretable architectures and state-of-the-art concept-based models on synthetic and real-world datasets.
-
-\section{Robust Concept Discovery}
-\textbf{Research: in progress. Status: drafted. Difficulty: medium. Priority: high.}
-
-In this chapter I will illustrate how to make models ``aware'' of concepts they discover during training eliminating the need for expensive (and manual) concept annotations. I will first describe how to make networks learn concept encodings without using any concept label during training. Next I will show how to avoid \textit{shortcut learning}~\citep{geirhos2020shortcut} which can prevent the network to learn a ``complete'' and robust concept representation. I have already obtained preliminary results on graph neural networks~\citep{magister2022encoding} which I submitted to the Neural Information and Processing Systems conference. In the next few months I will focus on extending the approach to other common architectures such as convolutional networks. I will conclude the chapter showing the results on real-world settings comparing supervised and unsupervised concept learning methods.
-
-\section{Concept Quality}
-\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
-
-In this chapter I will discuss how to measure the quality of concept representations. In particular I will focus on my contribution in inventing the niche impurity score~\citep{zarlenga2021quality} which generalizes concept completeness~\citep{yeh2020completeness} to concept subsets. I will demonstrate how this metric is computationally efficient and does not require concept labels thus making it applicable in real-world supervised and unsupervised scenarios. I will conclude the chapter with experiments showing how the niche impurity score can be used in practice to evaluate the robustness of concept representations generated by state-of-the-art supervised and unsupervised concept learning methods.
-
-
-\section{The ``PyTorch, Explain!'' Library}
-\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
-
-In this chapter I will illustrate the ``PyTorch, Explain!'' library, a free and open source python package which I developed and maintained during the PhD. The library contains all the advances I contributed to, including neural modules, metrics, dataset, and experiments. In this chapter I will explain the structure of the library and how to use it from installing the package to reproducing the experiments, from using existing modules in different scenarios to contributing to the codebase.
-
-
-\section{Applications to Medical Digital Twins}
-\textbf{Research: in progress. Status: drafted. Difficulty: medium. Priority: medium.}
-
-In this chapter I will showcase how my inventions significantly improved medical digital twin models~\citep{laubenbacher2021using}. First, I will descibe existing digital twin approaches in medicine and the main challenges of the field. Next, I will demonstrate how concept-based neural models can significantly improve the flexibility and robustness of existing equation-based approaches. In particular I will show how concept-based models allow the discovery of multi-omic patterns explaining drug responses in asthma and down syndrome.
-
-
-\section{Conclusion}
-\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
-
-I will conclude my thesis with a summary of my inventions. I will then discuss the impact of my contributions to the deep learning field as well as to broader research communities.
-
-
-
-
-\chapter{Timetable}
+\chapter*{Timetable}
 \textit{A timetable that schedules the remaining work and indicates when the draft and final versions of the thesis will be produced.}
 
 
-\section{Objectives}
+\section*{Objectives}
 My research objectives for rest of my Ph.D. are:
 \begin{itemize}
     \item Extend the differentiable concept discovery technique to all neural architectures.
@@ -227,7 +187,7 @@ My research objectives for rest of my Ph.D. are:
 \end{itemize}
 
 
-\section{Timeline}
+\section*{Timeline}
 
 \paragraph{Summer 2022 (July-September)}
 \begin{itemize}
@@ -237,7 +197,7 @@ My research objectives for rest of my Ph.D. are:
 \end{itemize}
 \textbf{Milestone(s): preliminary results on CNNs and KGEs.}
 
-\paragraph{Michaelmas 2021 (October-December)}
+\paragraph{Michaelmas 2022 (October-December)}
 \begin{itemize}
 	\item Extend differentiable concept discovery to transformers.
 	\item Fine-tune shortcut learning solutions.
@@ -245,21 +205,21 @@ My research objectives for rest of my Ph.D. are:
 \end{itemize}
 \textbf{Milestone(s): preliminary results on transformers.}
 
-\paragraph{Lent 2022 (January-March)}
+\paragraph{Lent 2023 (January-March)}
 \begin{itemize}
     \item Ask feedback on thesis draft.
     \item Extend the experiments on concept discovery and shortcut learning to real-world scenarios.
 \end{itemize}
 \textbf{Milestone(s): real-world tests.}
 
-\paragraph{Easter 2022 (April-June)}
+\paragraph{Easter 2023 (April-June)}
 \begin{itemize}
     \item Refine implementations.
     \item Write up and submit manuscript(s) to appropriate venue.
 \end{itemize}
 \textbf{Milestone(s): submit manuscript(s).}
 
-\paragraph{Summer 2022 (July-September)}
+\paragraph{Summer 2023 (July-September)}
 \begin{itemize}
     \item Improve thesis.
     \item Work on the reviews of submitted manuscript(s).
@@ -267,45 +227,222 @@ My research objectives for rest of my Ph.D. are:
 \textbf{Milestone(s): submit thesis final version.}
 
 
+\textit{A report on progress made in relation to that described in the first-year PhD Proposal. This should include an indication of where the student is relative to their original timetable, discussion of any significant changes to the original ideas and their implications for the research as a whole.}
+
+In my first Ph.D. year I analyzed the explainable AI (XAI) literature looking for the main knowledge gaps. According to my analysis state-of-the-art XAI methods: (i) were limited to local (instance-based) explanations, (ii) provided brittle and qualitative explanations, or (iii) needed to sacrifice prediction performances on challenging tasks. During the first year of Ph.D. I addressed these knowledge gaps improving state-of-the-art concept-based models~\citep{ghorbani2019towards,kim2018interpretability}. In particular, I contibuted to the invention of Logic Explained Networks (LENs)~\citep{ciravegna2021logic,barbiero2021entropy}, explainable-by-design concept-based architectures providing robust first-order logic logic explanations for their predictions. In my first-year Ph.D. Proposal I also suggested a few preliminary research directions to extend and improve explainable-by-design concept-based architectures.
+
+In my second year of Ph.D. I further analyzed the main gaps of explainable-by-design concept-based architectures preventing their deployment on a large scale, following the suggestions and feedback I received for my first-year viva. I identified three main issues: (i) explainable-by-design architectures did not provide any advantage over their black-box equivalents in terms of raw prediction performance, (ii) existing metrics to evaluate the quality of concept representations were unefficient or based on unrealistic assumptions, and (iii) robust concept-based models required expensive concept annotations for training. During my second year I addressed these knowledge gaps by: (i) contributing to the invention of Concept Embedding Models~\citep{zarlenga2022concept}, explainable-by-design architectures outperforming their black-box equivalents in terms of raw prediction accuracy, (ii) proposing two novel metrics~\citep{zarlenga2021quality,zarlenga2022concept} generalizing and relaxing the assumptions of existing scores measuring the quality of concept representations, and (iii) devising a concept encoding strategy to make graph neural networks aware of concepts they discover in an unsupervised way~\citep{magister2022encoding}.
+
+In summary, in my first two years of Ph.D. I demonstrated how the explainable-by-design architectures I contributed to provide robust trust certificates to their users~\citep{shen2022trust}. More specifically the invented models consistently outperform exiting black-box models in terms of raw prediction performance as well as in terms of quality and stability of their explanations. My plan for the last year of Ph.D. is to extend the unsupervised concept encoding strategy to embrace all the most common architectures. This will allow cutting the expenses for the adoption of concept-based models in different domains. Finally, I will conclude my thesis demonstrating the applicability of  the proposed concept-based models in high-stakes scenarios such as modeling medical digital twins.
 
 
-\chapter{Papers}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Introduction:
+%%
+\chapter{Introduction} \label{chapter:intro}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
 
-\textit{A list of any papers published (with URLs so that the assessors can read the papers), a list of any papers in press, submitted, or in preparation, and a list of any presentations given, whether or not the presentation is associated with a paper.}
+\textit{I will start my thesis with an overview of the state of the art of AI in research and companies and the potential impact of this field on humankind in the next decades. Next, I will discuss the current limitations and knowledge gaps which question the practical deployment of AI in high-stakes decision settings. I will conclude this chapter with an overview of my work describing how it advances the field AI and it contributes to a fairer and safer interaction with humankind.}
 
-\section{Concepts for Logic Explanations}
+Deep learning researchers stockpile ground-breaking achievements almost as fast as they find (consistently similar!) flaws in their models~\citep{marcus2022very}. The extremely high learning capacity may allow deep learning to achieve super-human performances on some tasks at the cost of making impossible even for researchers to trace back and explain incorrect predictions. As this trend got worse, lawmakers started questioning the ethical and legal ramifications of their deployment in safety-critical domains. As a response, the research community intensified the effort in developing trustworthy, fair and reliable models. This effort lead to relevant innovations aiming at explaining the inner workings of deep neural networks. However, after years of research, trustworthy deep learning models are still outside our reach.
+
+The key requisite for human trust is for an agent to show consistent and reliable behavior~\citep{shen2022trust}. The assessment of agents' behavior is commonly measured in terms of (i) task performance i.e., the capacity of the agent to provide \textbf{\textit{accurate predictions}} for test samples, and (ii) rationale i.e., the capacity of the agent to give \textbf{\textit{explanations}} for its predictions. While intense efforts lead to consistent advances in terms of explaining trained ``black-box'' models, most of these approaches turned out to be subject of similar limitations: they are mostly qualitative (mostly visual), local (instance-based), low-level (input-based), and post-hoc (they do not make a model trustworthy by design, they try to check if a model can be trusted). A first sign of change came only recently when \citet{koh2020concept} proposed to supervise the last hidden layer of neurons with human annotated concepts. This allowed the network to (i) be aware of ground-truth human concepts at training time, (ii) use learnt concepts to provide more intuitive high-level explanations, and (iii) interact with human experts correcting mispredicted concepts at test time. While this design significantly improved human trust, it did not solve the issue as (i) the explanations were still mostly local and qualitative and (ii) enforcing concept supervisions during training lead to worse task performance. As a result, finding a good compromise between accurate predictions and robust explanations remains one of the fundamental open problems in deep learning.
+
+This work aims at improving the current trade off between accuracy and explainability by proposing novel model designs (i) showing higher task performance compared to the state of the art, and (ii) providing quantitative and global explanations for their predictions. This work opens with an introduction to deep learning (Chapter~\ref{chapter:intro}) and explainability literature with an in-depth discussion on the main limitations of current methods including concept-based and logic-based models, metrics, datasets, and benchmarks (Chapter \ref{chapter:background}). The central chapters describe the main technical advances of this work. Chapter~\ref{chapter:metrics} discusses quantitative metrics that will be used to analyze and compare architectures throughout this work in terms of their task performance and explanation quality. Chapter~\ref{chapter:lens} addresses the ``\textit{explainability problem}'' through Logic Explained Networks i.e., neural networks providing quantitative and global concept-based explanations for their predictions. Chapter~\ref{chapter:cem} addresses the ``\textit{trade off problem}'' through Concept Embedding Models i.e., concept-based models going beyond the current compromise between accuracy and explainability. Chapter~\ref{chapter:unsupervised} extends the methods described in previous chapters to settings where (expensive!) concept annotations are not available, and must then be learnt in an unsupervised way. Chapter~\ref{chapter:applications} showcases real-world case studies and results in diverse settings from vision to biomedical applications. The last chapter provides a summary of the advances, drawing conclusion and future perspectives (Chapter~\ref{chapter:conclusion}).
+
+\bigskip
+
+\textbf{PAPERS}
 \nobibliography*
-\bibentry{ciravegna2021logic}
+\begin{enumerate}
+    \item \bibentry{ciravegna2021logic}
+    \item \bibentry{barbiero2021entropy}
+    \item \bibentry{jain2022extending}
+    \item Federico Siciliano, Pietro Barbiero, ..., Pietro Lio'. Explaining Neural Networks Using a Ruleset Based on Interpretable Concepts. \textit{arXiv preprint arXiv:XXXX.YYYYY},2023
+    \item \bibentry{georgiev2022algorithmic}
+    \item \bibentry{zarlenga2021quality}
+    \item \bibentry{zarlenga2022concept}
+    \item Han Xuanyuan, Pietro Barbiero, ..., and Pietro Lio' Analysing the Neurons of Graph Neural Networks: Towards Concept-Based Global Interpretability. \textit{arXiv preprint arXiv:XXXX.YYYYY}, 2023
+    \item \bibentry{magister2022encoding}
+    \item Pietro Barbiero, and Pietro Lio'. Logic-based Deep Learning Clinical models: Down Syndrome case study. \textit{arXiv preprint arXiv:XXXX.YYYYY}, 2023
+    \item \bibentry{kidwai2023forecasts}
+    \item \bibentry{barbiero2021graph}
+\end{enumerate}
 
-\bibentry{barbiero2021entropy}
+\section{The Good, the Bad, and the Ugly in AI}
 
+\section{Explainable AI to the Rescue}
+
+\section{Limitations and Knowledge Gaps in Explainable AI}
+
+\section{Summary and Contributions}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Related works:
+%%
+\chapter{Concept Learning Awakens} \label{chapter:background}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+\textit{In the first part of the chapter I will bring the reader in the amazing field of deep learning. I will first provide an overview of the field, give appropriate definitions, introduce the notation, and describe the details of architectures and learning algorithms. I will use this overview as a basis to demonstrate with simple examples why humans do not stand a chance in understanding what deep learning models learn. I will then illustrate the ethical repercussions of the opaqueness of such models which prevent their fair and safe deployment.}
+
+\textit{In the second part of the chapter I will describe the main approaches for explaining deep learning models and for designing more transparent modules~\citep{duran2021afraid,lo2020ethical,wachter2017counterfactual,gdpr2017,rudin2019stop} with specific details on robust and philosophically-/psychologically-grounded methods such as concept-based approachs~\citep{ghorbani2019towards,kim2018interpretability,shen2022trust}. I will then expose the main limitations of explainable AI and the current grand challenges. I will focus with more attention on the weaknesses my work aims at addressing, including: the lack of clear metrics for concept-based approaches, the lack of differentiable methods for mimicking human biases in using concepts for decision making, the accuracy-vs-interpretability trade-off of explainable AI methods, and the need for expensive manual annotations for differentiable concept-based approaches.}
+
+\section{Notation}
+
+\section{The Dark Side of Deep Learning}
+
+\section{Concept Learning: A New Hope}
+
+\section{The Darkness Strikes Back}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Concept Quality:
+%%
+\chapter{Concept Quality} \label{chapter:metrics}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+\textit{In this chapter I will discuss how to measure the quality of concept representations. In particular I will focus on my contribution in inventing the niche impurity score~\citep{zarlenga2021quality} which generalizes concept completeness~\citep{yeh2020completeness} to concept subsets. I will demonstrate how this metric is computationally efficient and does not require concept labels thus making it applicable in real-world supervised and unsupervised scenarios. I will conclude the chapter with experiments showing how the niche impurity score can be used in practice to evaluate the robustness of concept representations generated by state-of-the-art supervised and unsupervised concept learning methods.}
+
+\section{Rich or Pure? Trade-Offs in Concept Representations}
+
+\section{Concept Impurity Scores}
+
+\section{Comparing Representations in Concept-based Models}
+
+\section{Robustness and Scalability}
+
+\section*{Papers}
+\nobibliography*
+\begin{itemize}
+    \item \bibentry{zarlenga2021quality}
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Concepts for logic explanations:
+%%
+\chapter{Concept-based Logic Explanations of Neural Networks} \label{chapter:lens}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+\textit{In this chapter I will explain how concepts can be used to train more interpretable models. In particular, I will focus on my contributions in inventing Logic Explained Networks (LENs)~\citep{ciravegna2021logic}, a family of concept-based models providing first-order logic explanations for their predictions. I will describe LENs main architectures, learning paradigms, and logic rule extraction algorithms~\citep{barbiero2021entropy}. I will conclude the chapter showcasing LENs on a set of synthetic and real-world experiments demonstrating how LENs can provide highly accurate explanations with classification performances close to state-of-the-art models.}
+
+\section{Self-Explaining Models}
+
+\section{Sparse Attention: The XAI Evenstar}
+
+\section{Logic Explained Networks}
+
+\section{Assembling Logic Explanations}
+
+\section{Simple (Low-Entropy) Explanations}
+
+\section{Humans Prefer Logic}
+
+\section{The Accuracy-vs-Interpretability Trade-Off}
+
+\section*{Papers}
+\nobibliography*
+\begin{itemize}
+    \item \bibentry{ciravegna2021logic}
+    \item \bibentry{barbiero2021entropy}
+    \item \bibentry{jain2022extending}
+    \item Federico Siciliano, Pietro Barbiero, ..., Pietro Lio'. Explaining Neural Networks Using a Ruleset Based on Interpretable Concepts. \textit{arXiv preprint arXiv:XXXX.YYYYY},2023
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Beyond the Accuracy-vs-Interpretability Trade-Off:
+%%
+\chapter{Cracking Concept Bottlenecks Trade-Offs} \label{chapter:cem}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+\textit{In this chapter I will illustrate how concepts can be used to train interpretable models outperforming their non-interpretable equivalents in terms of raw task performance. In particular, I will focus on my contributions in inventing Concept Embedding Models (CEMs)~\citep{zarlenga2022concept} which are now the state of the art of supervised concept-based models. I will describe CEMs architectures and learning paradigms. I will also discuss how CEMs support effective human interactions through learnt concepts highlighting how these interactions can increase both model performances and human trust in the model~\citep{shen2022trust}. I will conclude the chapter demonstrating how CEMs outperform equivalent non-interpretable architectures and state-of-the-art concept-based models on synthetic and real-world datasets.}
+
+\section{The Information Bottleneck in Concept Learning}
+
+\section{Concept Embedding Models}
 
 \section{Beyond the Accuracy-vs-Interpretability Trade-Off}
+
+\section{Interacting with High-Dimensional Concepts}
+
+\section{Robustness and Cost Effectiveness}
+
+\section*{Papers}
 \nobibliography*
-\bibentry{zarlenga2022concept}
+\begin{itemize}
+    \item \bibentry{zarlenga2022concept}
+\end{itemize}
 
 
-\section{Robust Concept Discovery}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Robust Concept Discovery:
+%%
+\chapter{Concept Self-Awareness} \label{chapter:unsupervised}
+\textbf{Research: in progress. Status: drafted. Difficulty: medium. Priority: high.}
+
+\textit{In this chapter I will illustrate how to make models ``aware'' of concepts they discover during training eliminating the need for expensive (and manual) concept annotations. I will first describe how to make networks learn concept encodings without using any concept label during training. Next I will show how to avoid \textit{shortcut learning}~\citep{geirhos2020shortcut} which can prevent the network to learn a ``complete'' and robust concept representation. I have already obtained preliminary results on graph neural networks~\citep{magister2022encoding} which I submitted to the Neural Information and Processing Systems conference. In the next few months I will focus on extending the approach to other common architectures such as convolutional networks. I will conclude the chapter showing the results on real-world settings comparing supervised and unsupervised concept learning methods.}
+
+\section{The Costs of Supervised (Concept) Learning}
+
+\section{Fantastic Concepts and Where to Find Them}
+
+\section{Encoding Concepts in Neural Networks}
+
+\section{Removing Shortcuts to Concepts}
+
+\section*{Papers}
 \nobibliography*
-\bibentry{magister2022encoding}
+\begin{itemize}
+    \item Han Xuanyuan, Pietro Barbiero, ..., and Pietro Lio' Analysing the Neurons of Graph Neural Networks: Towards Concept-Based Global Interpretability. \textit{arXiv preprint arXiv:XXXX.YYYYY}, 2023
+    \item \bibentry{magister2022encoding}
+\end{itemize}
 
 
-\section{Concept Quality}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Applications to Medical Digital Twins:
+%%
+\chapter{Applications} \label{chapter:applications}
+\textbf{Research: in progress. Status: drafted. Difficulty: medium. Priority: medium.}
+
+\textit{In this chapter I will showcase how my inventions significantly improved medical digital twin models~\citep{laubenbacher2021using}. First, I will descibe existing digital twin approaches in medicine and the main challenges of the field. Next, I will demonstrate how concept-based neural models can significantly improve the flexibility and robustness of existing equation-based approaches. In particular I will show how concept-based models allow the discovery of multi-omic patterns explaining drug responses in asthma and down syndrome.}
+
+\section{Concept Learning for Biomedical Data}
+
+\section{mRNA Expression Profiles in Asthma}
+
+\section{Mouse Models of Down Syndrome}
+
+
+\section*{Papers}
 \nobibliography*
-\bibentry{zarlenga2021quality}
+\begin{itemize}
+    \item Pietro Barbiero, and Pietro Lio'. Logic-based Deep Learning Clinical models: Down Syndrome case study. \textit{arXiv preprint arXiv:XXXX.YYYYY}, 2023
+    \item \bibentry{kidwai2023forecasts}
+    \item \bibentry{barbiero2021graph}
+\end{itemize}
 
 
-\section{The ``Pytorch, Explain!'' Library}
-\nobibliography*
-\bibentry{barbiero2021pytorch}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Conclusion:
+%%
+\chapter{Conclusion} \label{chapter:conclusion}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+\textit{I will conclude my thesis with a summary of my inventions. I will then discuss the impact of my contributions to the deep learning field as well as to broader research communities.}
+
+\section{Summary of the Contributions}
+
+\section{Potential Impact on Research and Society}
+
+\section{The Next Decades in AI}
 
 
-\section{Applications to Medical Digital Twins}
-\nobibliography*
-\bibentry{barbiero2021graph}
 
-
-\section{Others}
+\chapter*{Other papers}
 \nobibliography*
 
 \bibentry{barbiero2020modeling}
@@ -337,10 +474,31 @@ My research objectives for rest of my Ph.D. are:
 %% Appendix:
 %%
 
-%\appendix
-%
-%\chapter{Extra Information}
-%Some more text ...
+% \appendix
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% The ``PyTorch, Explain!'' Library:
+%%
+% \chapter{The ``PyTorch, Explain!'' Library}
+% \textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+% \textit{In this chapter I will illustrate the ``PyTorch, Explain!'' library, a free and open source python package which I developed and maintained during the PhD. The library contains all the advances I contributed to, including neural modules, metrics, dataset, and experiments. In this chapter I will explain the structure of the library and how to use it from installing the package to reproducing the experiments, from using existing modules in different scenarios to contributing to the codebase.}
+
+% \section{Structure and Documentation}
+
+% \section{Setup}
+
+% \section{Modules}
+
+% \section{Metrics}
+
+
+% \section*{Papers}
+% \nobibliography*
+% \bibentry{barbiero2021pytorch}
+
 
 
 

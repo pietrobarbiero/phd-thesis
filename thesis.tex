@@ -328,19 +328,59 @@ This work aims at improving the current trade off between accuracy and explainab
 
 \textit{In this chapter I will explain how concepts can be used to train more interpretable models. In particular, I will focus on my contributions in inventing Logic Explained Networks (LENs)~\citep{ciravegna2021logic}, a family of concept-based models providing first-order logic explanations for their predictions. I will describe LENs main architectures, learning paradigms, and logic rule extraction algorithms~\citep{barbiero2021entropy}. I will conclude the chapter showcasing LENs on a set of synthetic and real-world experiments demonstrating how LENs can provide highly accurate explanations with classification performances close to state-of-the-art models.}
 
-\section{Self-Explaining Models}
 
-\section{Sparse Attention: The XAI Evenstar}
+Summary to this point: to solve the problem of human trust in AI we need reliable models that can be accurate and provide explanations for their decisions, we want to know how! In this chapter I will explain how to design self-explaining models providing global and quantitative explanations for their predictions.
+
+\section{Motivation}
+
+Knowledge gap/Motivation: current solutions provide post-hoc, local, and qualitative explanations. Post-hoc is bad because the damage is done: whatever biases the model learnt during training can be identified but not changed. Local is bad because local explanations are brittle: explain a cherry-picked example or an outlier does not generalize. Qualitative is bad because it's not clear how general are explanations: would they hold on unseen samples? for how many samples would they hold? how to compare XAI models? Hence we want: self-explainable models providing global and quantitative explanations. Concept bottleneck models tried to solve the post-hoc problem architecturally/by design: they propose an architecture where models' predictions are conditioned on concepts. This way: predictions can be explained in terms of concepts being active/inactive. However, explanations are still qualitative e.g., this concept is important, this one is less important. Is it possible to formalize the explanation in a way that is not ambiguous and shows how the model used the concepts? Also, explanations are still local: for this sample this concept A is active, concept B is inactive, etc. How to provide global explanations?
+
+Contribution: a self-explainable model providing global and quantitative explanations.
+
+Key innovation: a sparse attention mechanism for concept bottleneck models.
+
+Expected outcome: The sparse attention allows the model to learn how to cherry-pick the most relevant concepts for each task and use only them for solving the task. This way the model learns how to solve the task using only a few concepts which can be active/inactive. This allows the extraction of logic explanations as the model is learning a logic mapping from (fuzzy) concepts to (classification) tasks.The logic explanations are simple thanks to the sparse attention mechanism. Without the attention mechanism the extraction of logic rules won't scale as the truth tables may explode (their size grows as exponentially with the number of concepts). Logic explanations can also be evaluated with quantitative metrics in terms of performance/interpretability: 
+
+- performance: prediction accuracy (using the logic formulae to predict unseen samples)
+
+- interpretability: complexity (the number of terms in a logic formula)
+
+Research questions: how would this approach compare with existing approaches? is it interpretable as white boxes in terms of rule complexity? is it accurate as black boxes? what's the accuracy-vs-explainability trade-off of the approach? is there any advantage of using this approach over existing methods?
+
 
 \section{Logic Explained Networks}
 
-\section{Assembling Logic Explanations}
+\subsection{Generate Concept-based Logic Explanations}
+The XOR problem
 
-\section{Simple (Low-Entropy) Explanations}
+\subsection{The Entropy Layer}
 
-\section{Humans Prefer Logic}
+\section{Experiments and Results}
+
+\section{Impact and Significance}
+Summary of contributions: a sparse attention mechanism for concept bottlenecks.
+
+Summary of results: a scalable, self-explaining neural approach providing first-order logic explanations for its predictions. The new approach is almost as accurate as black box models (e.g., an equivalent neural model with same number of parameters/layers, random forest). The explanations provided by the new approach are: (i) much more concise than those provided by existing white box rule learners (e.g., decision trees and bayesian rule lists), (ii) as accurate as the ones provided by existing white boxes. It's a way to rigorously assess whether concept-based models learn as intended by checking how they arrived to a prediction.
+- the concept-based and the XAI field as novel self-explaining approach which may encourage further advances in concept learning
+
+- other research disciplines as the extraction of FOL rules can be useful to answer research questions in a human interpretable way
+
+- production/society as self-explaining models might become a legal requirement
+
+
+Impact/significance: self-explaining models may soon become a legal requirement in Europe for the ethical deployment of AI models. So, this work has an impact on:
+
+- the concept-based and the XAI field as novel self-explaining approach which may encourage further advances in concept learning
+
+- other research disciplines as the extraction of FOL rules can be useful to answer research questions in a human interpretable way
+
+- production/society as self-explaining models might become a legal requirement
+
 
 \section{The Accuracy-vs-Interpretability Trade-Off}
+Next steps: the proposed approach provides a good compromise between accuracy and explainability and it's Pareto optimal compared to black and white-boxes but it does not outperforms existing approaches on BOTH explainability and accuracy. How can we solve this trade-off?
+
+
 
 \section*{Papers}
 \nobibliography*
@@ -360,6 +400,24 @@ This work aims at improving the current trade off between accuracy and explainab
 
 \textit{In this chapter I will illustrate how concepts can be used to train interpretable models outperforming their non-interpretable equivalents in terms of raw task performance. In particular, I will focus on my contributions in inventing Concept Embedding Models (CEMs)~\citep{zarlenga2022concept} which are now the state of the art of supervised concept-based models. I will describe CEMs architectures and learning paradigms. I will also discuss how CEMs support effective human interactions through learnt concepts highlighting how these interactions can increase both model performances and human trust in the model~\citep{shen2022trust}. I will conclude the chapter demonstrating how CEMs outperform equivalent non-interpretable architectures and state-of-the-art concept-based models on synthetic and real-world datasets.}
 
+Summary to this point: so now we know how to train self-explaining models providing global and quantitative explanations for their predictions. However, we lost a bit of accuracy. In this chapter I will show how to design a self-explaining models without sacrificing accuracy (and vice versa).
+
+\section{Motivation}
+Knowledge gap/motivation: concept bottleneck models are powerful and engender human trust because they provide concept-based explanations (awhich are aligned with human catergories + interventions demonstreate the "causal" dependency of the predictions on concepts. However, vanilla CBMs (such as standard E-LENs) come with a cost: they increase interpretability (and trust) but undermine model performance. For this reason, hybrid CBMs~\citep{mahinpei2021promises} were invented trying to get the lost performance back by providing a set of extra unsupervised neurons in the concept bottleneck. This way the concept bottleneck has more "freend logic-based as we have seen in the previous chapter) + humans can interact with the model at concept level at test time by fixing learnt concepts and improving models' performances. These increase human trust as: explanations are based on terms dom" and learning capacity which can be used to increase performance. However (2), this approach impairs interpretability and trust as it weakens the structural dependency of tasks from concepts. In fact, concept interventions are not effective on hybrid CBMs! This means that the model was able to learn both tasks and concepts, but the model does not use the concepts to learn the tasks, but rather the information encoded in the extra unsupervised neurons. This way the whole point of concept bottleneck models is lost. Again, it seems like there is a trade-off between accuracy (hybrid CBMs and vanilla end-to-end black-box) and interpretability (vanilla CBMs). Can e design a model which represents the best of the two worlds? Can we gain accuracy in CBMs without sacrificing interpretability?
+
+
+Contribution: a concept bottleneck model breaking the information bottleneck at concept-level and going beyond the current accuracy-vs-explainability trade-off.
+
+Key innovation: a high-dimensional representation to learn concepts in the bottleneck.
+
+Expected outcome: the high-dimensional representation increases the capacity of the concept bottleneck models at concept level. The increased model capacity allows to encode more information in each concept not just active/inactive, but nuances representing different aspects of the same concepts enriching the concept semantics with subsymbolic information. This can be useful for explainability as it allows to find relevant subclusters which may represent sub-concepts. However, in this approach ALL neurons are supervised in the bottleneck, thus the prediction still depend on concepts being active/inactive. For this reason, concept interventions are applied as in vanilla CBMs. To evaluate these models and compared them to the current SOTA we use:
+
+- performance: model accuracy
+
+- interpretability/trust: concept alignment score, logic explanation accuracy/complexity, test-time concept interventions
+
+Research questions: how would this approach compare with existing approaches? is it interpretable as white boxes in terms of rule complexity? is it accurate as black boxes? what's the accuracy-vs-explainability trade-off of the approach? is there any advantage of using this approach over existing methods?
+
 \section{The Information Bottleneck in Concept Learning}
 
 \section{Concept Embedding Models}
@@ -369,6 +427,22 @@ This work aims at improving the current trade off between accuracy and explainab
 \section{Interacting with High-Dimensional Concepts}
 
 \section{Robustness and Cost Effectiveness}
+
+Summary of contributions: a scalable, self-explaining neural model providing first-order logic explanations for its predictions without sacrificing accuracy!
+
+Summary of results: the new approach is more accurate than equivalent black boxes and comparable with hybrid CBMs. The concept alignment is as good as in vanilla CBMs and is much higher than in hybrid or fuzzy CBMs for challenging tasks. The mutual information input-to-concepts and concepts-to-task is much higher in CEMs than in vanilla CBMs or black boxes. In CEMs the information is not being compressed at concept level, allowing to break the information bottleneck. CEMs are also efficiently support concept interventions increasing human trust as opposed to hybrid CBMs.
+
+Impact/significance: self-explainability is an ethical and (soon) legal requirement for the deployment of AI-based technologies. However, it's often coming at the cost of reducing models' accuracy. This work solves this trade-off for concept-based models, so it has an impact on:
+
+- the concept-based and the XAI field as novel self-explaining approach which may encourage further advances in concept learning
+
+- other research disciplines as CEMs keep working well in real-world conditions where (expensive!) concept-supervisions are scarce + users can trust predictions (model is accurate) and can interact with the model to verify the "causal" relationship between learnt tasks and concepts (or just improve model performance through interventions)
+
+- production/society as self-explaining models might become a legal requirement and high-performance is a must
+
+\section{A Remark on Concept Annotations}
+Even though CEM is efficient in real-world conditions where concept supervisions are scarce, it still requires some supervisions at concept level. Such supervisions might be expensive and in some cases (e.g. biology) concepts might be unknown a priori which makes it impossible to train supervised concept bottleneck models. How can we train concept bottleneck models without supervised concepts?
+
 
 \section*{Papers}
 \nobibliography*
@@ -385,6 +459,25 @@ This work aims at improving the current trade off between accuracy and explainab
 
 \textit{In this chapter I will illustrate how to make models ``aware'' of concepts they discover during training eliminating the need for expensive (and manual) concept annotations. I will first describe how to make networks learn concept encodings without using any concept label during training. Next I will show how to avoid \textit{shortcut learning}~\citep{geirhos2020shortcut} which can prevent the network to learn a ``complete'' and robust concept representation. I have already obtained preliminary results on graph neural networks~\citep{magister2022encoding} which I submitted to the Neural Information and Processing Systems conference. In the next few months I will focus on extending the approach to other common architectures such as convolutional networks. I will conclude the chapter showing the results on real-world settings comparing supervised and unsupervised concept learning methods.}
 
+
+Summary to this point: up to here we demonstrated how to design self-explainable models which are as accurate as black boxes (or more) without sacrificing interpretability and the effectiveness of causual human interactions. In this chapter I will show a trick to train concept bottleneck modes for GNNs without expensive and sometimes unknown concept annotations.
+
+\section{Motivation}
+Knowledge gap/motivation: CEMs and LENs are robust self-explaining models going beyond the current accuracy-vs-explainability trade-off. However, these models require concept supervisions which might be expensive to generate to train the model, but in some cases might not even be known a priori, which makes impossible to train a concept bottleneck in a supervised way. In this setting there are papers (ACE, GCExplainer) showing how latent concepts can be extracted from trained architectures post-hoc with the assumption that: 1 concept == 1 cluster. However, the existing concept-based unsupervised approaches are post-hoc, while we argue against this family of approaches because they do not increase human trust in the model itself allowing for interventions at test time, nor they try to make the model itself more explainable. So, here we try to find a way to exploit the natural clustering performed in hidden layers of a neural network to make the NN aware of concepts and use them to predict the classification targets, making the architecture self-explainable.
+
+Contribution: a self-explainable GNN model distilling unsupervised concepts at train time and using these concepts to solve the task.
+
+Key innovation: a concept distillation layer based on hard cluster encodings.
+
+Expected outcome: the concept distillation layer generates hard cluster encodings (labels) in the hidden layers of a GNN. Each cluster can be thought as a concept representing a spacific motif/subgraph. A LENs model is trained on top of cluster encodings to generate logic explanations for the predictions of the GNN based on the concepts learnt without concept annotations. The model is evaluated in terms of:
+
+- performance: model accuracy
+
+- interpretability: concept purity (edit distance of motifs in each cluster), concept completeness, logic explanations' accuracy and complexity
+
+Research questions: how would this approach compare with existing approaches (post-hoc such as black-box GNN + GCExplainer)? is it interpretable as white boxes in terms of rule complexity? is it accurate as black boxes? what's the accuracy-vs-explainability trade-off of the approach? is there any advantage of using this approach over existing methods?
+
+
 \section{The Costs of Supervised (Concept) Learning}
 
 \section{Fantastic Concepts and Where to Find Them}
@@ -393,9 +486,24 @@ This work aims at improving the current trade off between accuracy and explainab
 
 \section{Removing Shortcuts to Concepts}
 
+
+Summary of contributions: a self-explaining GNN which explains its own predictions based on concepts learnt automatically in an unsupervised way.
+
+Summary of results: the model accuracy of the self-explaining GNN is comparable to a standard GNN. The concept purity is as high as in post-hoc methods such as GCExplainer. Motifs/subgraphs are coherent within each cluster. The learnt set of concepts is complete w.r.t. the task i.e., it is possible to accurately predict the task given the information in learnt concepts. The logic explanation accuracy is just a bit lower than model accuracy (as expected, because that's a boolean mapping). The complexity is really low ~3-4 terms which makes the explanations simple and quickly interpretable.
+
+Impact/significance: this work alleviates the problem of generating expensive concept annotations which might even be unfeasible in some fields where humans have not yet accumulated enough knowledge to allow a robust a large-scale concept annotations. So, this work has an impact on:
+
+- the concept-based and the XAI field allowing the expansion of these approaches in tackling problems where concept annotations are too scarce/expensive or not existing.
+
+- other research disciplines especially those where learning new concepts can help humans accumulate knowledge and build an ontology
+
+\section{Architectural biases}
+Next steps: scale to non-GNN models which might be tricky because in GNNs clustering works and has a strong association to motifs, while other architectures do not have such a strong bias.
+
 \section*{Papers}
 \nobibliography*
 \begin{itemize}
+    \item Steve Azzolin, Pietro Barbiero, ..., and Pietro Lio' Global GNN Interpretability via Logic Explanations. \textit{arXiv preprint arXiv:XXXX.YYYYY}, 2023
     \item Han Xuanyuan, Pietro Barbiero, ..., and Pietro Lio' Analysing the Neurons of Graph Neural Networks: Towards Concept-Based Global Interpretability. \textit{arXiv preprint arXiv:XXXX.YYYYY}, 2023
     \item \bibentry{magister2022encoding}
 \end{itemize}

@@ -31,6 +31,42 @@
 \usepackage{bibentry}
 \usepackage{url}
 
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{paralist}
+\usepackage{dsfont}
+
+\usepackage{amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{float}
+%\usepackage{fontawesome}
+\usepackage{makecell}
+\usepackage{listings}
+\usepackage{csquotes}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
 
 \bibliographystyle{plainnat}
 
@@ -123,8 +159,8 @@
 \abstract{%
 % The opaque reasoning of neural networks induces a lack of human trust.
 Human trust in deep neural networks is currently an open problem as their decision process is opaque. 
-Current solutions addressing this problem either (i) provide post-hoc, qualitative, and local explanations, or (ii) increase models' transparency undermining their accuracy.
-To address these limitations, in this work I demonstrated how to design ``explainable-by-design'' neural models providing quantitative and global explanations without sacrificing accuracy. My key innovations enabling this progress were (i) a sparse attention mechanism and (ii) a high-dimensional representation for concepts learnt during training. On one side, the sparse attention mechanism allowed concept bottleneck models to solve each task using a small subset of relevant concepts and to learn simple logic-based explanations at train time. On the other side, the high-dimensional representation of concepts broke the information bottleneck of these concept-based models allowing them to gain accuracy without sacrificing interpretability. To make the proposed approaches more general, I devised an unsupervised concept layer which reduced training costs and allowed to train these models in absence of concept labels. As existing metrics were not always directly applicable, I proposed new performance scores to validate the impact of my innovations and to compare them with the current state of the art. The results of my experiments demonstrated how the proposed approaches significantly outperformed state-of-the-art models in predictive performance while providing accurate global explanations, thus breaking the current accuracy-vs-explainability trade-off and laying the foundations for human trust in deep learning.
+Current solutions addressing this problem either (i) provide post-hoc, qualitative, and local explanations, or (ii) increase models' transparency compromising their accuracy.
+To address these limitations, in this work I demonstrated how to design ``explainable-by-design'' neural models providing quantitative and global explanations without sacrificing accuracy. My key innovations enabling this progress are (i) a sparse attention mechanism and (ii) a high-dimensional representation for concepts learnt during training. On the one hand, the sparse attention mechanism allowed concept bottleneck models to solve each task using a small subset of relevant concepts and to learn simple logic-based explanations at train time. On the other hand, the high-dimensional representation of concepts breaks the information bottleneck of these concept-based models allowing them to gain accuracy without sacrificing interpretability. To make the proposed approaches more general, I devised an unsupervised concept layer which reduced training costs and allowed to train these models in absence of concept labels. As existing metrics were not always directly applicable, I proposed new performance scores to validate the impact of my innovations and to compare them with the current state of the art. The results of my experiments demonstrated how the proposed approaches significantly outperformed state-of-the-art models in predictive performance while providing accurate global explanations, thus breaking the current accuracy-vs-explainability trade-off and laying the foundations for human trust in deep learning.
 }
 
 % current limitations/knowledge gaps in XAI
@@ -288,13 +324,159 @@ This work aims at improving the current trade off between accuracy and explainab
 
 \textit{In the second part of the chapter I will describe the main approaches for explaining deep learning models and for designing more transparent modules~\citep{duran2021afraid,lo2020ethical,wachter2017counterfactual,gdpr2017,rudin2019stop} with specific details on robust and philosophically-/psychologically-grounded methods such as concept-based approachs~\citep{ghorbani2019towards,kim2018interpretability,shen2022trust}. I will then expose the main limitations of explainable AI and the current grand challenges. I will focus with more attention on the weaknesses my work aims at addressing, including: the lack of clear metrics for concept-based approaches, the lack of differentiable methods for mimicking human biases in using concepts for decision making, the accuracy-vs-interpretability trade-off of explainable AI methods, and the need for expensive manual annotations for differentiable concept-based approaches.}
 
-\section{Notation}
+% \section{Notation}
+% \begin{itemize}
+%     \item input space
+%     \item output space
+%     \item concept space
+%     \item ground truth labels
+%     \item predictions / representations
+%     \item concept encoder
+%     \item concept decoder / label predictor
+% \end{itemize}
 
 \section{The Dark Side of Deep Learning}
+Standard intro w/ motivation for XAI: trade-off between accuracy and explainability: 
+\begin{itemize}
+    \item classical ML models are explainable, but they may have poor performances on some data
+    \item DL has high performances, but is less explainable generating a lack of human trust
+\end{itemize}
+
+Researchers are trying to: make explainable models more accurate and black boxes more interpretable
+
 
 \section{Concept Learning: A New Hope}
+A recent leap in XAI research happened in 2018 when \citet{kim2018interpretability} started the field of concept-based XAI. Their argument was:
+
+\begin{displayquote}
+A key difficulty, however, is that most ML models operate on features, such as pixel values, that do not correspond to high-level concepts that humans easily understand. Furthermore, a model’s internal values (e.g., neural activations) can seem incomprehensible. We can express this difficulty mathematically, viewing the state of an ML model as a vector space $E_m$ spanned by basis vectors $e_m$ which correspond to data such as input features and neural activations. Humans work in a different vector space $E_h$ spanned by implicit vectors $e_h$ corresponding to an unknown set of human-interpretable concepts. [...] To address these challenges, we [...] provide an interpretation of a neural net’s internal state in terms of human-friendly concepts.
+\end{displayquote}
+
+The motivation for this research line has roots in cognitive sciences (e.g., Representational Theory of the Mind). According to these theories \textbf{concepts are the basic building blocks of human thoughts}~\citep{margolis2007ontology}: following simple rules the human mind can combine finite stocks of basic concepts over and over again to create increasingly complex representations~\citep{margolis2007ontology}. For instance, the mind can combine the basic concepts ``roof'' and ``walls'' to generate the concept ``house''. 
+
+These concept theories motivated~\citet{kim2018interpretability} opening a research line on concept learning in ML to increase human trust in AI. The objective of this field is to increase human trust by making AI use ``the same building blocks of human thought'' as opposed to other XAI approaches~\citep{kim2018interpretability}. In particular concept-based XAI has the following aims:
+\begin{itemize}
+    \item discover concepts from trained models to explain their decisions in ``human'' terms (post-hoc explainability)
+    \item train models to learn specific concepts and compose them to solve tasks (self-explainability)
+\end{itemize} 
+Compared to other XAI approaches, concept-based XAI has solid foundations in cognitive sciences and a precise formalization in universal algebra.
+
+% concepts ontology (philosophy):
+
+% intuitively, what is a concept? formal concept is defined to be a pair (A, B), where A is a set of objects (called the extent) and B is a set of attributes (the intent) such that the extent A consists of all objects that share the attributes in B, and dually the intent B consists of all attributes shared by the objects in A.
+
+\section{Elements of Logic(s) and (Formal) Concept Theory}
+% \begin{definition}[Signature~\citep{goguen2005concept}]
+% A signature $\Sigma = (S_f, S_r, \text{ar})$ is a collection of:
+% \begin{itemize}
+%     \item a set of \textbf{function symbols} $S_f$
+%     \item a set of \textbf{relation symbols} (or predicates) $S_r$
+%     \item \textbf{a morphism} $\text{ar}: S_f \cup S_r \rightarrow \mathbb{N}$, which assigns a natural number called \textit{arity} to every function or relation symbol
+% \end{itemize}
+% \end{definition}
+
+Intuitively, what is a concept? It's (mental) representation describing objects sharing some common properties \citep{margolis2007ontology}. In the following we formalize this idea and provide some concrete examples.
+
+\subsection{Institutions and Abstract Formal Concept}
+
+Let $\mathbb{C}at^{op}$ represent the opposite of the category of small categories.
+\begin{definition}[Institution~\citep{goguen2005concept}]
+An institution $\mathbb{I}$ consists of:
+\begin{itemize}
+    \item an abstract category $\mathbb{S}ign$ of signatures
+    \item a functor $Sen: \mathbb{S}ign \rightarrow \mathbb{S}et$ giving for each signature $\Sigma$ the set of sentences $Sen(\Sigma)$, and for each signature morphism $\sigma: \Sigma \rightarrow \Sigma'$, the sentence translation map $Sen(\sigma): Sen(\Sigma) \rightarrow Sen(\Sigma')$
+    \item a functor $Mod: \mathbb{S}ign \rightarrow \mathbb{C}at^{op}$ giving for each signature $\Sigma$ the category of models $Mod(\Sigma)$, and for each signature morphism $\sigma: \Sigma \rightarrow \Sigma'$, the reduct functor $Mod(\sigma): Mod(\Sigma') \rightarrow Sen(\Sigma)$
+    \item a satisfaction relation $\models_\Sigma \subseteq |Mod(\Sigma)| \times Sen(\Sigma)$ for each signature $\Sigma \in \mathbb{S}ign$ such that for each signature morphism, the following satisfaction condition holds (``truth under context morphisms''): $M' \models_{\Sigma'} Sen(\sigma) \iff Mod(\sigma)(M') \models_\Sigma \phi$ for each $M' \in Mod(\Sigma')$ and $\phi \in Sen(\Sigma)$.
+\end{itemize}
+\end{definition}
+
+We say $M \models_\Sigma T$ where T is a set of $\Sigma$-sentences, if $M \models_\Sigma \phi$ for all $\phi \in T$, and we say $T \models_\Sigma \phi$ if for all $\Sigma$-models $M$, $M \models_\Sigma T$ implies $M \models_\Sigma \phi$.
+
+\begin{corollary}
+First order logic is an institution.
+\end{corollary}
+
+\begin{displayquote}
+Other logics follow a similar pattern, including modal logics, temporal logics, many sorted logics, equational logics, order sorted logics, description logics, higher order logics, etc. Database systems of various kinds are also institutions, where database states are contexts, queries are sentences, and answers are models.
+\end{displayquote}
+
+Given an institution $\mathbb{I}$, a theory is a pair $(\Sigma,T)$, where $T$ is a set of $\Sigma$-sentences. The collection of all $\Sigma$-theories can be given a lattice structure, under inclusion: $(\Sigma,T) \leq (\Sigma',T') \iff \Sigma \subseteq \Sigma' \wedge T \subseteq T'$.
+
+For any signature $\Sigma$ of an institution $I$, there is a Galois connection between its $\Sigma$-theories and its sets of $\Sigma$-models i.e., $(\Sigma,T)^\bullet = \{M \ | \ M \models_\Sigma T\}$, and if $\mathcal{M}$ is a collection of $\Sigma$-models, let $\mathcal{M}^\bullet = \{\phi \ | \ \mathcal{M} \ \models_\Sigma \phi\}$.
+
+\begin{definition}[(Abstract) Formal Concept~\citep{goguen2005concept}]
+An (abstract) formal concept of an institution $\mathbb{I}$ is a pair $(T,\mathcal{M})$ such that $T^\bullet = \mathcal{M}$ and $\mathcal{M}^\bullet = T$ (i.e., a closed theory).
+\end{definition}
+
+This is the most general definition of a concept embracing all current concept theories (e.g., John Sowa’s lattice of theories [61] (abbreviated LOT), the formal concept analysis (FCA) of Rudolf Wille [15], the information flow (IF) of Jon Barwise and Jerry Seligman [3], Gilles Fauconnier’s logic-based mental spaces [13], Peter Gardenfors geometry-based conceptual spaces [16], the conceptual integration (CI, also called blending) of Fauconnier and Turner, etc.). However, to make the notion of concept more concrete and directly applicable to standard ML language we will define a ``concrete'' formal concept in the (standard) institution of First Order Logic (FOL) and in the context of ML.
+
+
+\subsection{Concrete Formal Concepts and First Order Logic}
+
+In a more concrete setting, we will consider in the following entities in the institution of First Order Logic (FOL):
+\begin{itemize}
+    \item the function symbol $g$ (also known as \textbf{concept encoder})
+    \item the function symbol $f$ (also known as \textbf{concept decoder} or \textbf{label predictor})
+    \item the set of \textbf{formal objects} $G$ (FOL models)
+    \item the set of \textbf{formal attributes} $M$ (FOL sentences)
+    \item the binary relation between formal objects and attributes $I \subseteq G \times M$
+\end{itemize}
+
+\begin{definition}[Formal Context~\citep{ganter1997formal}]
+A \textbf{formal context} $\mathbb{K} := (G,M,I)$ consists of a set of \textbf{formal objects} $G$, a set of \textbf{formal attributes} $M$, and a relation $I$ between $G$ and $A$.
+\end{definition}
+
+In order to express that an object $g$ is in a relation $I$ with an attribute $m$, we write $gIm$ or $(g, m) \in I$ and read it as ``the object $g$ has the attribute $m$".
+
+\begin{definition}[Set of common attributes~\citep{ganter1997formal}]
+For a set $A \subseteq G$ of objects we define the set of attributes common to the objects in $A$: $A' := \{m \in M \ | \ \forall g \in A, \ (g,m) \in I \}$.
+\end{definition}
+
+\begin{definition}[Set of common objects~\citep{ganter1997formal}]
+For a set $B \subseteq M$ of attributes we define the set of objects having all attributes in $B$: $B' := \{g \in G \ | \ \forall m \in B, \ (g,m) \in I \}$.
+\end{definition}
+
+\begin{definition}[(Concrete) Formal Concept~\citep{ganter1997formal}]
+A (concrete) \textbf{formal concept} of the context $(G, M,I)$ is a pair $(A, B)$ such that $A \subseteq G$, $B \subseteq M$, $A' = B$ and $B' = A$.
+\end{definition}
+
+We call $A$ the \textbf{extent} and $B$ the \textbf{intent} of the concept $(A, B)$. $\mathfrak{B}(G, M, I)$ denotes the set of all concepts of the context $(G, M, I)$.
+
+Concept hierarchies
+
+Concept lattice
+
+\subsection{Concept Representations in Machine Learning}
+In practice, we will represent a concrete contexts using matrices where the rows are headed by object names, the columns are headed by attribute names, and the value of a cell represents the binary relation. In machine learning settings the usual context is known as ``feature matrix'' and is represented by the set $X \subseteq \mathbb{R}^{n \times d}$ where $n=|G|$ and $d=|M|$ representing the relation $I \subseteq G \times M$. 
+Notice how a formal concept can have different representations depending on its intent $M$. 
+This is why when the intent is less ``structured'' (e.g., pixels) concepts can be quite noisy. For instance, two images representing the concept ``house'' need to have the exact same pixels representing the ``house''. This is because the context of ``pixels'' is not translation or rotation invariant. 
+
+This is why in these contexts the original intent is usually transformed into more robust set of attributes where concepts are more stable (i.e., the formal concept is larger). The most common contexts in machine learning are:
+\begin{itemize}
+    \item $A \subseteq \{0,1\}^{n \times n}$ commonly known as adjacency matrix
+    \item $Y \subseteq \mathbb{R}^{n \times l}$ commonly known as the matrix of ``ground-truth labels''
+    % \item $C \subseteq \mathbb{R}^{n \times k}$ commonly known as the matrix of ``ground truth attribute labels''
+\end{itemize}
+
+To provide a set of more intuitive examples of concepts in different contexts, Figure X shows a single instance of the formal concept with name ``house'':
+\begin{itemize}
+    \item input matrix: segment of image (subset of pixels)
+    \item adjacency matrix: motif of graph (subset of nodes and edges)
+    % \item attribute label matrix: a row with a subset of non-zero columns of the table corresponding to the attribute names ``(roof, floor, walls)''
+    \item label matrix: a rectangle with a non-zero elements of the table (subset of rows and columns)
+\end{itemize}
+
+
+% more examples: \url{https://wikious.com/en/Formal_concept_analysis}
+
+\subsection{Unsupervised Concept Learning (post-hoc explainability)}
+Automatic Concept-based Explanations
+
+\subsection{Supervised Concept Learning (self-explainability)}
+Concept Bottleneck Models
 
 \section{The Darkness Strikes Back}
+Accuracy-explainability trade-offs in concept-based learning
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -308,6 +490,58 @@ This work aims at improving the current trade off between accuracy and explainab
 \section{Rich or Pure? Trade-Offs in Concept Representations}
 
 \section{Concept Impurity Scores}
+\begin{definition}[Concept nicher] \label{def:nicher}
+Given a set of concept representations $\hat{C} \subseteq \mathbb{R}^{d \times k}$, we define a concept nicher as a function $\nu: \{1, \cdots k\} \times \{1, \cdots k\} \mapsto [0, 1]$ that returns $\nu(i, j) \approx 1$ if the $i$-th concept $\mathbf{\hat{c}}_{(:, i)}$ is entangled with the $j$-th ground truth concept $c_j$, and $\nu(i, j) \approx 0$ otherwise.
+\end{definition}
+
+Our definition above can be instantiated in various ways, depending on how entanglement is measured. In favour of efficiency, we measure entanglement using absolute Pearson correlation $\rho$, as this measure can efficiently discover (a linear form of) association between variables~\cite{altman2015points}. We call this instantiation  \emph{concept-correlation nicher} (CCorrN) and define it as
+$\text{CCorrN}(i, j) := \big| \rho\big(\{\mathbf{\hat{c}}^{(l)}_{(:, i)}\}_{l=1}^N, \{c^{(l)}_j\}_{l=1}^N\big) \big|$.
+
+% The above definition is affected by how entanglement is defined. One efficient way of measuring the entanglement is to use the absolute Pearson correlation, denoted as $\rho$. We call such an instantiation a \emph{concept-correlation nicher} (CCorrN) and define it as:
+% \[
+%     \text{CCorrN}(i, j) := \big| \rho\big(\{\mathbf{\hat{c}}^{(l)}_{(:, i)}\}_{l=1}^N, \{\mathbf{\hat{c}}^{(l)}_j\}_{l=1}^N\big) \big|
+% \]
+If $\mathbf{\hat{c}}_{(:, i)}$ is not a scalar representation (i.e., $d > 1$), then for simplicity we use the maximum absolute correlation coefficient between all entries in $\mathbf{\hat{c}}_{(:, i)}$, and the target concept label $c_j$ as a representative correlation coefficient for the entire representation $\mathbf{\hat{c}}_{(:, i)}$. We then define a concept niche as: 
+\begin{definition}[Concept niche]
+The concept niche $N_j(\nu, \beta)$ for target concept $j$, determined by concept nicher $\nu(\cdot, \cdot)$ and threshold $\beta \in [0,1]$, is defined as $N_j(\nu, \beta) := \big\{i \ \ | \ \ i \in \{1, \cdots, k\} \text{ and } \nu(i, j) > \beta \big\}$.
+\end{definition}
+
+From this, the Niche Impurity (NI) measures the predictive capacity of the complement of concept niche $N_i(\nu, \beta)$, referred to as $\neg N_i(\nu, \beta) := \{1, \cdots, k\} \; \backslash \; N_i(\nu, \beta)$, for the $i$-th ground truth concept:
+%Given the complement of concept niche $N_i(\nu, \beta)$, which we refer to as $\neg N_i(\nu, \beta) := \{1, \cdots, k\} \; \backslash \; N_j(\nu, \beta)$, the Niche Impurity (NI) measures its predictive capacity for the $i$-th ground truth concept.
+
+\begin{definition}[Niche Impurity (NI)] \label{def:niche_impurity}
+Given a classifier $f: \hat{C} \mapsto C$, concept nicher $\nu$, threshold $\beta \in [0, 1]$, and labeled concept representations $\{(\mathbf{\hat{c}}^{(l)}, \mathbf{c}^{(l)})\}_{l = 1}^n$, the Niche Impurity of the $i$-th output of $f(\cdot)$ is defined as $\text{NI}_i(f, \nu, \beta) := \text{AUC} \big( \{( f|_{\neg N_i(\nu, \beta)} \big( \mathbf{\hat{c}}^{(l)}_{(:, \neg N_i(\nu, \beta))} \big), c^{(l)}_i) \}_{l=1}^n \big)$, where $f|_{\neg N_j(\nu, \beta)}$
+% : \hat{C} \mapsto C$
+is the classifier resulting from masking all entries in $\neg N_j(\nu, \beta)$ when feeding $f$ with concept representations. 
+\end{definition}
+
+Although $f$ can be any classifier, in our experiments we use a ReLU MLP with hidden layer sizes $\{ 20, 20 \}$.
+Intuitively, a NI of $1/2$ (random AUC of niche complement) indicates that the concepts inside the niche $N_i(\nu)$ are the only concepts predictive of the $i$-th concept, that is, concepts outside the niche do not hold any predictive information of the $i$-th concept.
+% In contrast, a NI of $1$ suggests that concepts outside the nice $N_i(\nu)$ are still fully predictive of concept $i$.
+Finally, the \textit{Niche Impurity Score} metric measures how much information apparently disentangled concepts
+% (target concepts and their niche complements)
+are actually sharing:
+
+\begin{definition}[Niche Impurity Score (NIS)] \label{def:niche_impurity_score}
+Given a classifier $f: \hat{C} \mapsto C$ and concept nicher $\nu$, the niche impurity score $\text{NIS}(f,\nu) \in [0,1]$ is defined as the summation of niche impurities across all concepts for different values of $\beta$: $\text{NIS}(f,\nu) := \int_{0}^{1} (\sum_{i=1}^{k} \text{NI}_i(f, \nu, \beta)/k) d\beta$.
+\end{definition}
+
+In practice, we estimate this integral using the trapezoid method with values in $\beta \in \{ 0.0, 0.05, \cdots, 1\}$. For efficiency, we parameterise $f$ as an MLP,
+% one can very efficiently compute the NI for different concepts and values of $\beta$,
+leading to a tractable impurity metric which easily scales as the number of concepts $k$ increases. Intuitively, a NIS of $1$ means that all the information to perfectly predict each ground truth concept is spread on many different and disentangled concept representations. In contrast, a NIS around $1/2$ (random AUC) indicates that no concept can be predicted by any concept representation subset.
+% Intuitively, a NIS score of $1$ conveys perfect purity and means that the set of learnt concepts can be divided into disentangled sets, each of which is related to predicting a single ground truth concept, while the NIS score around $1/2$ conveys maximum impurity and indicates that information related to each ground truth concept is scattered across all assumed disentangled sets of learnt concepts.
+
+\section{Concept Alignment Score}
+The Concept Alignment Score (CAS) aims to measure how much learnt concept representations can be trusted as faithful representations of their ground truth concept labels. Intuitively, CAS generalises concept accuracy by considering the predictions' homogeneity within groups of similar samples. More specifically, CAS applies a clustering algorithm $\kappa$ to find $\rho > 2$ clusters, assigning to each sample $\mathbf{x}^{(j)}$, for each concept $c_i$, a cluster label $\pi_i^{(j)} \in \{1, \cdots, \rho\}$, using the concept representation $\hat{\textbf{c}}_i$. Given $N$ test samples, the homogeneity score $h(\cdot)$~\citep{rosenberg2007v} then computes the conditional entropy $H$ of ground truth labels $C_i = \{c_i^{(j)}\}_{j=1}^{N}$ w.r.t. cluster labels $\Pi_i = \{\pi_i^{(j)}\}_{j=1}^{N}$, i.e., $h = 1$ when $H(C_i,\Pi_i)=0$ and $h = 1 - H(C_i, \Pi_i)/H(C_i)$ otherwise. The higher the homogeneity, the more a learnt concept representation is ``aligned'' with its labels, and can thus be trusted as a faithful representation. CAS averages homogeneity scores over all concepts, providing a normalised score $\text{CAS} \in [0,1]$:
+\begin{equation}
+    \text{CAS}(\mathbf{\hat{c}}_1, \cdots, \mathbf{\hat{c}}_k) \triangleq \frac{1}{N - 2}\sum_{p=2}^N \Bigg(\frac{1}{k} \sum_{i=1}^k h(c_i, \kappa_p(\hat{\textbf{c}}_i)) \Bigg)
+    % \text{CAS}(\mathbf{\hat{c}}_1, \cdots, \mathbf{\hat{c}}_k) := \frac{1}{k(N-2)} \sum_{p=2}^N \sum_{i=1}^k h(c_i, \kappa(\ha  t{\textbf{c}}_i, p)))
+\end{equation}
+% Notice how when the number of clusters $p$ equals the number of samples, CAS and concept accuracy are identical.
+% The concept alignment score is therefore maximal (i.e., $\text{CAS} = 1$) when all clusters contain only data points which are members of a single concept class (i.e., for all samples within a cluster, the label of any concept $i$ is either always $c_i = True$ or always $c_i = False$). 
+To tractably compute CAS in practice, we sum homogeneity scores by varying $p$ across $p \in \{2, 2 + \delta, 2 + 2 \delta, \cdots, N\}$ for some $\delta > 1$ (details in Appendix). Furthermore, we use k-Medoids~\citep{kaufman1990partitioning} for cluster discovery, similarly to~\citet{ghorbani2019interpretation} and~\citet{magister2021gcexplainer}, and use concept logits when computing the CAS for Boolean and Fuzzy CBMs. For Hybrid CBMs, we use $\hat{\mathbf{c}}_i \triangleq [\hat{\mathbf{c}}_{[k:k + \gamma]}, \hat{\mathbf{c}}_{[i:(i + 1)]}]^T$ as the concept representation for $c_i$ (i.e., the extra capacity is a shared embedding across all concepts).
+% Cluster and concept labels are matched by homogeneity score.
+% and use a simple majority class count for labeling a cluster.
 
 \section{Comparing Representations in Concept-based Models}
 
@@ -319,77 +553,6 @@ This work aims at improving the current trade off between accuracy and explainab
     \item \bibentry{zarlenga2021quality}
 \end{itemize}
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Concepts for logic explanations:
-%%
-\chapter{Concept-based Logic Explanations of Neural Networks} \label{chapter:lens}
-\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
-
-\textit{In this chapter I will explain how concepts can be used to train more interpretable models. In particular, I will focus on my contributions in inventing Logic Explained Networks (LENs)~\citep{ciravegna2021logic}, a family of concept-based models providing first-order logic explanations for their predictions. I will describe LENs main architectures, learning paradigms, and logic rule extraction algorithms~\citep{barbiero2021entropy}. I will conclude the chapter showcasing LENs on a set of synthetic and real-world experiments demonstrating how LENs can provide highly accurate explanations with classification performances close to state-of-the-art models.}
-
-
-Summary to this point: to solve the problem of human trust in AI we need reliable models that can be accurate and provide explanations for their decisions, we want to know how! In this chapter I will explain how to design self-explaining models providing global and quantitative explanations for their predictions.
-
-\section{Motivation}
-
-Knowledge gap/Motivation: current solutions provide post-hoc, local, and qualitative explanations. Post-hoc is bad because the damage is done: whatever biases the model learnt during training can be identified but not changed. Local is bad because local explanations are brittle: explain a cherry-picked example or an outlier does not generalize. Qualitative is bad because it's not clear how general are explanations: would they hold on unseen samples? for how many samples would they hold? how to compare XAI models? Hence we want: self-explainable models providing global and quantitative explanations. Concept bottleneck models tried to solve the post-hoc problem architecturally/by design: they propose an architecture where models' predictions are conditioned on concepts. This way: predictions can be explained in terms of concepts being active/inactive. However, explanations are still qualitative e.g., this concept is important, this one is less important. Is it possible to formalize the explanation in a way that is not ambiguous and shows how the model used the concepts? Also, explanations are still local: for this sample this concept A is active, concept B is inactive, etc. How to provide global explanations?
-
-Contribution: a self-explainable model providing global and quantitative explanations.
-
-Key innovation: a sparse attention mechanism for concept bottleneck models.
-
-Expected outcome: The sparse attention allows the model to learn how to cherry-pick the most relevant concepts for each task and use only them for solving the task. This way the model learns how to solve the task using only a few concepts which can be active/inactive. This allows the extraction of logic explanations as the model is learning a logic mapping from (fuzzy) concepts to (classification) tasks.The logic explanations are simple thanks to the sparse attention mechanism. Without the attention mechanism the extraction of logic rules won't scale as the truth tables may explode (their size grows as exponentially with the number of concepts). Logic explanations can also be evaluated with quantitative metrics in terms of performance/interpretability: 
-
-- performance: prediction accuracy (using the logic formulae to predict unseen samples)
-
-- interpretability: complexity (the number of terms in a logic formula)
-
-Research questions: how would this approach compare with existing approaches? is it interpretable as white boxes in terms of rule complexity? is it accurate as black boxes? what's the accuracy-vs-explainability trade-off of the approach? is there any advantage of using this approach over existing methods?
-
-
-\section{Logic Explained Networks}
-
-\subsection{Generate Concept-based Logic Explanations}
-The XOR problem
-
-\subsection{The Entropy Layer}
-
-\section{Experiments and Results}
-
-\section{Impact and Significance}
-Summary of contributions: a sparse attention mechanism for concept bottlenecks.
-
-Summary of results: a scalable, self-explaining neural approach providing first-order logic explanations for its predictions. The new approach is almost as accurate as black box models (e.g., an equivalent neural model with same number of parameters/layers, random forest). The explanations provided by the new approach are: (i) much more concise than those provided by existing white box rule learners (e.g., decision trees and bayesian rule lists), (ii) as accurate as the ones provided by existing white boxes. It's a way to rigorously assess whether concept-based models learn as intended by checking how they arrived to a prediction.
-- the concept-based and the XAI field as novel self-explaining approach which may encourage further advances in concept learning
-
-- other research disciplines as the extraction of FOL rules can be useful to answer research questions in a human interpretable way
-
-- production/society as self-explaining models might become a legal requirement
-
-
-Impact/significance: self-explaining models may soon become a legal requirement in Europe for the ethical deployment of AI models. So, this work has an impact on:
-
-- the concept-based and the XAI field as novel self-explaining approach which may encourage further advances in concept learning
-
-- other research disciplines as the extraction of FOL rules can be useful to answer research questions in a human interpretable way
-
-- production/society as self-explaining models might become a legal requirement
-
-
-\section{The Accuracy-vs-Interpretability Trade-Off}
-Next steps: the proposed approach provides a good compromise between accuracy and explainability and it's Pareto optimal compared to black and white-boxes but it does not outperforms existing approaches on BOTH explainability and accuracy. How can we solve this trade-off?
-
-
-
-\section*{Papers}
-\nobibliography*
-\begin{itemize}
-    \item \bibentry{ciravegna2021logic}
-    \item \bibentry{barbiero2021entropy}
-    \item \bibentry{jain2022extending}
-    \item Federico Siciliano, Pietro Barbiero, ..., Pietro Lio'. Explaining Neural Networks Using a Ruleset Based on Interpretable Concepts. \textit{arXiv preprint arXiv:XXXX.YYYYY},2023
-\end{itemize}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -421,10 +584,237 @@ Research questions: how would this approach compare with existing approaches? is
 \section{The Information Bottleneck in Concept Learning}
 
 \section{Concept Embedding Models}
+For each concept, MixCEM learns a mixture of two embeddings with explicit semantics representing the concept's activity. Such design allows our model to construct evidence both in favour of and against a concept being active, and supports simple concept interventions as one can switch between the two embedding states at intervention time.
+%
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/mixcem_simple_extended.png}
+%     \caption{\textbf{Mixture of Concept Embeddings Model}: from an intermediate latent code $\mathbf{h}$, we learn two embeddings per concept, one for when it is active (i.e., $\hat{\textbf{c}}^+_i$), and another when it is inactive (i.e., $\hat{\textbf{c}}^-_i$). Each concept embedding (shown in this example as a vector with $m=2$ activations) is then aligned to its corresponding ground truth concept through the scoring function $s(\cdot)$, which learns to assign activation probabilities $\hat{p}_i$ for each concept. These probabilities are used to output an embedding for each concept via a weighted mixture of each concept's positive and negative embedding.
+%     }
+%     \label{fig:split_emb_architecture}
+% \end{figure}
+%
+We represent concept $c_i$ with two embeddings $\hat{\textbf{c}}^+_i, \hat{\textbf{c}}^-_i \in \mathbb{R}^m$, each with a specific semantics: $\hat{\textbf{c}}^+_i$ represents its active state (concept is \texttt{true}) while $\hat{\textbf{c}}^-_i$ represents its inactive state (concept is \texttt{false}). To this aim, a DNN $\psi(\mathbf{x})$ learns a latent representation $\mathbf{h} \in \mathbb{R}^{n_\text{hidden}}$ which is the input to any CEM. 
+% In practice this could be any differentiable encoder architecture designed to learn a meaningful concise representation of the input or it could be an identity function.
+MixCEM then feeds $\mathbf{h}$ into two concept-specific fully connected layers, which learn two concept embeddings in $\mathbb{R}^m$, namely $\hat{\mathbf{c}}^+_i = \phi^+_i(\mathbf{h}) = a(W^+_i\mathbf{h} + \mathbf{b}^+_i$) and $\hat{\mathbf{c}}^-_i = \phi^-_i(\mathbf{h}) = a(W^-_i\mathbf{h} + \mathbf{b}^-_i)$.\footnote{In practice, we use a leaky-ReLU for the activation $a(\cdot)$} Notice that while more complicated architectures/models can be used to parameterise our concept embedding generators $\phi^+_i(\mathbf{h})$ and $\phi^-_i(\mathbf{h})$, we opted for a simple one-layer neural network to constrain parameter growth in models with large bottlenecks.
+
+Our architecture encourages embeddings $\hat{\mathbf{c}}^+_i$ and $\hat{\mathbf{c}}^-_i$ to be aligned with ground-truth concept $c_i$ via a learnable and differentiable scoring function $s: \mathbb{R}^{2 m} \rightarrow [0, 1]$, trained to predict the probability $\hat{p}_i$ of concept $c_i$ being active from the embeddings' joint space, i.e., $\hat{p}_i \triangleq s([\hat{\mathbf{c}}^+_i, \hat{\mathbf{c}}^-_i]^T) =  \sigma\big(W_s[\hat{\mathbf{c}}^+_i, \hat{\mathbf{c}}^-_i]^T + \mathbf{b}_s\big)$. We constrain parameters $W_s$ and $\mathbf{b}_s$ to be shared across all concepts for parameter efficiency.
+% and to be consistent with existing CBMs. 
+We construct the final concept embedding $\hat{\mathbf{c}}_i$ for $c_i$ as a weighted mixture of $\hat{\mathbf{c}}^+_i$ and $\hat{\mathbf{c}}^-_i$ as:
+\[
+\hat{\mathbf{c}}_i \triangleq \big(\hat{p}_i \hat{\mathbf{c}}^+_i + (1 - \hat{p}_i) \hat{\mathbf{c}}^-_i \big)
+\]
+Intuitively, this serves a two-fold purpose: (i) it forces the model to depend only on $\hat{\mathbf{c}}^+_i$ when the $i$-th concept is active, i.e., $c_i = 1$ (and only on $\hat{\mathbf{c}}^-_i$ when inactive), leading to two different semantically meaningful latent spaces, and (ii) it enables a clear intervention strategy where one switches the embedding states when correcting a mispredicted concept, as discussed below.
+
+Finally, MixCEM concatenates all $k$ mixed concept embeddings, resulting in a bottleneck $g(\mathbf{x}) = \hat{\textbf{c}}$ with $k\cdot m$ units (see end of Figure~\ref{fig:split_emb_architecture}). This is passed to the label predictor $f$ to obtain a downstream task label. In practice, following~\citet{koh2020concept}, we use an interpretable label predictor $f$ parameterised by a simple linear layer, though more complex functions could be explored too. Notice that as in vanilla CBMs, MixCEM provides a concept-based explanation for the output of $f$ through its concept probability vector $\hat{\mathbf{p}} \triangleq [\hat{p}_1, \cdots, \hat{p}_k ]$, indicating the predicted concept activity. This architecture can be trained in an end-to-end fashion by \textit{jointly} minimising via stochastic gradient descent a weighted sum of the cross entropy loss on both task prediction and concept predictions:
+% To train our architecture, we aim to produce both accurate downstream predictions and meaningful concept-based explanations $\hat{\mathbf{p}}$ of those predictions. For this, we minimize the following loss via stochastic gradient descent:
+\begin{align}
+    % \mathcal{L} := \mathbb{E}_{(\mathbf{x}, \mathbf{y}, \mathbf{c})}\Big[ \mathcal{L}_\text{task}\Big(\mathbf{y}, f\big(g(\mathbf{x}) \; \big| \big| \; s(g(\mathbf{x}))\big)\Big) + \alpha \mathcal{L}_\text{CrossEntr}\Big(\mathbf{c}, s\big(g(\mathbf{x})\big)\Big) \Big]
+    \mathcal{L} \triangleq \mathbb{E}_{(\mathbf{x}, y, \mathbf{c})}\Big[ \mathcal{L}_\text{task}\Big(y, f\big(g(\mathbf{x})\big)\Big) + \alpha \mathcal{L}_\text{CrossEntr}\Big(\mathbf{c}, \hat{\mathbf{p}}(\mathbf{x})\Big) \Big]
+\end{align}
+where hyperparameter $\alpha \in \mathbb{R}^+$ controls how much we value concept accuracy w.r.t. downstream task accuracy. 
+
 
 \section{Beyond the Accuracy-vs-Interpretability Trade-Off}
+\subsection{Task Accuracy}
+
+\paragraph{MixCEM improves generalisation accuracy (y-axis of Figure \ref{fig:accuracy}).}
+Our evaluation shows that embedding-based CBMs (i.e., Hybrid-CBM and MixCEM) can achieve even better downstream accuracy than DNNs without concepts, and can easily outperform Boolean and Fuzzy CBMs by a large margin (up to $+45\%$ on Dot). This effect is emphasised when the downstream task is not a linear function of the concepts (e.g., XOR and Trigonometry) or when concept annotations are incomplete (e.g., Dot and CelebA). At the same time, we observe that all models achieve a similar high mean concept accuracy for all datasets (see Appendix~\ref{sec:taks_and_concept_perf}). This suggests that, as hypothesised, the trade-off between concept accuracy and task performance in concept-incomplete tasks is significantly alleviated by the introduction of concept embeddings in a CBM's bottleneck. Finally, notice that CelebA showcases how including concept supervision during training (as in MixCEM) can lead to an even higher task accuracy than the one obtained by the no-concept model ($+5\%$). This result further suggests that concept embedding representations enable high levels of interpretability without sacrificing performance.
+% These results show that concept embedding models make use of their extra capacity to encode important information needed for the downstream task which cannot be effectively encoded in a scalar/binary vector; all without the need of sacrificing the accuracy of their explanations.
+% On the XOR dataset all concept representations lead to similar task accuracy (close to $100\%$). On the Trigonometric dataset, the task accuracy of Boolean models drops to about $80\%$. On the Dot dataset, only the task accuracy of concept embedding models is above $90\%$, outperforming Boolean- and Fuzzy-based models by $\sim 20\%$ accuracy. On CUB Isolated Concept Embeddings outperform scalar concepts, but the differences are less pronounced as the bottleneck is large. Notably, in CelebA the proposed concept embedding models outperform even standard end-to-end models by $\sim 10\%$ accuracy.
+
+
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/tradeoff.pdf}
+%     \caption{Accuracy-vs-interpretability trade-off in terms of \textbf{task accuracy} and \textbf{concept alignment score} for different concept bottleneck models. In CelebA, our most constrained task, we show the top-1 accuracy for consistency with other datasets.
+%     % As the classification problem gets harder, concept embedding models outperform scalar-based concept methods. Notably, in CelebA our proposed approach outperforms even end-to-end models by a significant margin.
+%     For these results, and those that follow, we compute all metrics on test sets across $5$ seeds and report their mean and $95\%$ confidence intervals.}
+%     \label{fig:accuracy}
+% \end{figure}
+
+% \begin{figure}[!t]
+%     \centering
+%     %  \centering
+%     %  \begin{subfigure}[b]{1\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=0.4\textwidth]{fig/inference.pdf}
+%     %      \caption{Task inference from concepts, i.e. $\mathbb{P}(Y|\hat{C})$. \fg{$R^e$}}
+%     %      \label{fig:cbm_inference_scheme}
+%     %  \end{subfigure}\\
+%     %  \vspace{2mm}
+%     %  \centering
+%     %  \begin{subfigure}[b]{1\textwidth}
+%     %      \centering
+%      \includegraphics[width=\textwidth]{fig/repr_accuracy_test.pdf}
+%      \caption{Test accuracy of a random forest trained on different components of the concept representation. On the XOR dataset, all concept representations and components lead to similar task accuracy. On the Trigonometric dataset, the task accuracy of the model based on Boolean concepts drops significantly. On the Dot dataset, only the model based on concept embeddings context has high task accuracy. The task accuracy based on concept semantics is similar for all models and for all datasets.}
+%     %      \label{fig:cbm_inference_results}
+%     %  \end{subfigure}
+%     % \caption{Inference.}
+%     \label{fig:cbm_inference_results}
+% \end{figure}
+
+
+\paragraph{MixCEM overcomes the information bottleneck (Figure~\ref{fig:info_plane}).}
+The Information Plane method indicates, as hypothesised, that embedding-based CBMs (i.e., Hybrid-CBM and MixCEM) do not compress input data information, with $I(X, C)$ monotonically increasing during training epochs. On the other hand, Boolean and Fuzzy CBMs, as well as vanilla end-to-end models, tend to ``forget''~\citep{shwartz2017opening} input data information in their attempt to balance competing objective functions. Such a result constitutes a plausible explanation as to why embedding-based representations are able to maintain both high task accuracy and mean concept accuracy compared to CBMs with scalar concept representations. In fact, the extra capacity allows CBMs to maximise concept accuracy without over-constraining concept representations, thus allowing useful input information to pass by. In MixCEMs all input information flows through concepts, as they supervise the whole concept embedding. In contrast with Hybrid models, this makes the downstream tasks completely dependent on concepts, which explains the higher concept alignment scores obtained by MixCEM (see below).
+% The relationship between the quality of concept representations w.r.t. the input distribution remains widely unexplored. In this work we propose investigating this relationship using the notion of the Information Plane~\cite{tishby2000information}.
+% : we would be (probably) the first at pinpointing a clear relationship.
+% Specifically, we conjecture that employing embeddings as concept representations circumvents the information bottleneck by preserving more information from the input distribution as part of their high-dimensional activations. Such a result would constitute a pausible explanation as to why embedding-based representations are able to maintain both high task accuracy and mean concept accuracy compared to CBMs with scalar concept-representations. If true, we believe such effect should be captured by the Information Plane in the form of a positively correlated evolution of $I(X, C)$, the MI between inputs $X$ and learnt concept representations $C$,  and $I(C, Y)$, the MI between learnt concept representations $C$ and task labels $Y$. In contrast, we anticipate that scalar-based concept representations (e.g., Fuzzy and Bool CBMs), as well as end-to-end models, will be forced compress the information from the input data at concept level, leading to a compromise between the $I(X, C)$ and $I(C, Y)$. 
+% We empirically show this exact phenomenon in Figure~\ref{fig:info_plane}, where we plot the evolution of the $I(X, C)$ vs $I(C, Y)$ evaluated on the test set of each task and model during training. Notice that our results indicate that CBMs using embedding representations do not compress input data information (i.e., $I(X, C)$ remains monotonically increasing during training) while CBMs using scalar-based representations, as well as vanilla end-to-end models, tend to ``forget'' input data information in their attempt to balance competing objective functions (e.g., interpretability and downstream performance). \todo{THIS NEEDS TO BE CONCLUDED. What is the main takeaway from this experiment and what is the message we want the reader to take from it?}.
+
+
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/mutual_info_xcy.pdf}
+%     % \hspace{1.cm}\textsc{XOR}\hspace{4.2cm}\textsc{DOT}\hspace{3.5cm}\textsc{Trigonometry}\\
+%     % \vspace{-.cm}
+%     % \includegraphics[width=0.2\textwidth]{fig/xor_plot_I(X,T)vsI(T,Y).pdf}
+%     % \includegraphics[width=0.2\textwidth]{fig/dot_plot_I(X,T)vsI(T,Y).png}
+%     % \includegraphics[width=0.2\textwidth]{fig/trig_plot_I(X,T)vsI(T,Y).png}\\
+%     % \includegraphics[trim=0 0 50 0, clip, width=0.32\textwidth]{fig/xor_plot_I(X,T)vsI(T,C).png}
+%     % \includegraphics[trim=0 0 50 0, clip, width=0.32\textwidth]{fig/dot_plot_I(X,T)vsI(T,C).png}
+%     % \includegraphics[trim=0 0 50 0, clip, width=0.32\textwidth]{fig/trig_plot_I(X,T)vsI(T,C).png}\\
+%     % \includegraphics[trim=22 235 0 92, clip, width=0.65\textwidth]{fig/legend1.png}    
+%     % \includegraphics[trim=115 235 102 90, clip, width=0.33\textwidth]{fig/legend2.png}
+%     \caption{Mutual Information (MI) of concept representations ($\hat{C}$) w.r.t. input distribution ($X$) and ground truth labels ($Y$) during training.
+%     % MI between concept representations and task labels ($I(T;Y))$) against MI between concept representations and input distributions ($I(X;T))$) (top row). MI between concept representations and concept labels ($I(T;C))$) against MI between concept representations and input distributions ($I(X;T))$) (bottom row).
+%     Each point is produced by averaging over $5$ runs. The size of the points is proportional to the training epoch.%\todo{Add legend and results for CUB and CelebA.}
+%     }
+%     \label{fig:info_plane}
+% \end{figure}
+
+\subsection{Interpretability}
+
+% \giu{The headings of the following two paragraphs overlaps a bit in message. Make the distinction a bit sharper. Maybe also switch their order?  }
+
+\paragraph{MixCEM learns more interpretable concept representations (x-axis of Figure~\ref{fig:accuracy}).}
+Using the proposed CAS metric, we show that concept representations learnt by MixCEMs have alignment scores competitive or even better (e.g., on CelebA) than the ones of Boolean and Fuzzy CBMs. The alignment score also shows, as hypothesised, that hybrid concept embeddings are the least faithful representations---with alignment scores up to $25\%$ lower than MixCEM in the Dot dataset. This is due to their unsupervised activations containing information which may not be necessarily relevant to a given concept. This result  is a further evidence for why we expect interventions to be ineffective in Hybrid models (as we show shortly).
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/all_concept_auc.pdf}
+%     \caption{\textbf{Alignment of learnt concepts w.r.t. their ground truth labels.} As the classification problem gets harder, the proposed approach outperforms hybrid representations by a large margin. Alignment scores of hybrid concepts are close to random chance. Notably, in CUB$^*$ concepts learnt by the proposed approach are even more aligned with the corresponding labels compared with Boolean or Fuzzy concepts. Concept alignment is computed on test sets over $5$ runs. Results are reported with the mean and its $95\%$ confidence interval.}
+%     \label{fig:alignment}
+% \end{figure}
+
+
+
+\paragraph{MixCEM captures meaningful concept semantics (Figure \ref{fig:xai}).}
+% \todo{This entire subsection needs to be updated (MATEO). Please do not review yet.... Story to be told here: (1) our concept embeddings can be useful as representations for downstream tasks that depend only on a few concepts (2) why? we can clearly see that their latent space is very separable compared to that of Hybrid by maintaining a clear separation between activated and inactivated concepts (3) this is further corroborated by looking at nearest neighbors of a given concept.}
+Our concept alignment results hint at the possibility that concept embeddings learnt by MixCEM may be able to offer more than simple concept prediction. In fact, we hypothesise that their seemingly high alignment may lead to these embeddings forming more interpretable representations than Hybrid embeddings, which can lead to more useful representations for external downstream tasks. To explore this, we train a Hybrid-CBM and a MixCEM using a variation of CUB with only 25\% of its concept annotations randomly selected before training, resulting in a bottleneck with 28 concepts. Once these models have been trained to convergence,
+we use their learnt bottleneck representations to predict the remaining 75\% of the concept annotations in CUB using a simple logistic linear model. The model trained using the Hybrid bottleneck notably underperfoms when compared to the model trained using the MixCEM bottleneck (Hybrid-trained model has a mean concept accuracy of 91.83\% $\pm$ 0.51\% while the MixCEM-trained model's concept accuracy is 94.33\% $\pm$ 0.88\%). This corroborates our CAS results by suggesting that the bottlenecks learnt by MixCEMs are considerably more powerful as interpretable representations and can be used in separate downstream tasks.
+
+We can further explore this phenomena qualitatively by visualising the embeddings learnt for a single concept using its 2-dimensional t-SNE~\citep{van2008visualizing} plot.
+% and (ii) by looking at samples whose concept embeddings $\{\hat{\mathbf{c}}_i^{(1)}, \hat{\mathbf{c}}_i^{(2)}, \cdots \}$ for concept $c_i$ are closest to the embedding $\hat{\mathbf{c}}_i^{(\text{test})}$ of a test point $\mathbf{x}^{(\text{test})}$.
+As shown in colour in Figure~\ref{fig:mixcem_tsne}, we can see that the embedding space learnt for a concept $\hat{\mathbf{c}}_i$ (we show here the concept ``has white wings'') forms two clear clusters of samples, one for points in which the concept is active and one for points in which the concept is inactive. When performing a similar analysis for the same concept in the Hybrid CBM (Figure~\ref{fig:hybrid_tsne}), where we use the entire extra capacity as the concept's representation, we see that this latent space is not as clearly separable as that in MixCEM's embeddings, suggesting this latent space is unable to capture concept-semantics as clearly as MixCEM's latent space. Notice that MixCEM's t-SNE seems to also show smaller subclusters within the activated and inactivated clusters. As Figure~\ref{fig:mixcem_nn} shows, by looking at the nearest Euclidean neighbours in concept's $c_i$ embedding's space, we see that MixCEM concepts do not only clearly capture a concept's activation, but they exhibit high class-wise coherence by mapping same-type birds close to each other (explaining the observed subclusters). These results, and similar results shown in Appendix), strongly suggest that MixCEM is learning useful and interpretable high-dimensional concept representations.
+
+% The proposed approach makes concepts' latent spaces isolated. For each concept the approach generates clusters strongly correlated with concept labels (top row). As a result, each super-cluster has a straightforward interpretation: concept on / concept off---as in Boolean or fuzzy representations. Interpretable sub-clusters correlated to both concepts and tasks emerge in latent spaces (see Figure \ref{fig:tsne_tasks} and \ref{fig:bird_clusters}, top): samples' nearest neighbors are coherent and share common features (see Figure \ref{fig:bird_nearest}, top). On the contrary, in hybrid concept representations samples do not cluster according to concept labels (see Figure \ref{fig:xai}, bottom row) as the extra neurons are not supervised and contain strongly entangled information. In hybrid concepts, small clusters are less coherent (see Figure \ref{fig:tsne_tasks} and \ref{fig:bird_clusters}, bottom).
+
+% \begin{figure}[!ht]
+%     \centering
+%     \begin{subfigure}[b]{0.3\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{fig/mixcem_tsne.png}
+%         \subcaption{
+%         }
+%         \label{fig:mixcem_tsne}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.3\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{fig/hybrid_tsne.png}
+%         \subcaption{
+%         }
+%         \label{fig:hybrid_tsne}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.3\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{fig/mixcem_nn.png}
+%         \subcaption{
+%         }
+%         \label{fig:mixcem_nn}
+%     \end{subfigure}
+    
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/tsne_task_splitemb_perching.png}
+%     %     %  \caption{Low dimensional representation of the neural symbolic concept embedding "has wing color grey".}
+%     %     %  \label{fig:tsne_emb}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/tsne_concept_splitemb_perching.png}
+%     %     %  \caption{Low dimensional representation of the hybrid concept embedding "has wing color grey".}
+%     %     %  \label{fig:tsne_fuzzyplus}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/cluster_splitemb_perching.png}
+%     %     %  \caption{Rows are clusters found from the concept embedding of "multi-colored chest".}
+%     %     %  \label{fig:bird_clusters}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/nearest_splitemb_perching.png}
+%     %     %  \caption{Rows are clusters found from the concept embedding of "multi-colored chest".}
+%     %     %  \label{fig:bird_clusters}
+%     %  \end{subfigure}\\
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/tsne_task_fuzzyp_perching.png}
+%     %      \caption{TSNE of the concept embedding "has wing color grey". Colors are tasks (bird species). Top: MixCEM. Bottom: hybrid.}
+%     %      \label{fig:tsne_tasks}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/tsne_concept_fuzzyp_perching.png}
+%     %      \caption{TSNE of the concept embedding "has wing color grey". Red/blue colors show if "has wing color grey" is true/false. Top: MixCEM. Bottom: hybrid.}
+%     %      \label{fig:tsne_concepts}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/cluster_fuzzyp_perching.png}
+%     %      \caption{Rows are clusters found from the concept embedding of "multi-colored chest". Top: MixCEM. Bottom: hybrid.}
+%     %      \label{fig:bird_clusters}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/nearest_fuzzyp_perching.png}
+%     %      \caption{Sample's nearest neighbors in the embedding space of the concept "multi-colored chest". Top: MixCEM. Bottom: hybrid.}
+%     %      \label{fig:bird_nearest}
+%     %  \end{subfigure}\\
+%     \caption{Qualitative results: (a and b) t-SNE visualisations of ``has white wings'' concept embedding learnt in CUB with sample points coloured red if the concept is active in that sample, (c) top-5 test neighbours of MixCEM embedding for the concept ``has white wings'' across 5 random test samples.}
+%     \label{fig:xai}
+% \end{figure}
+
+
 
 \section{Interacting with High-Dimensional Concepts}
+
+\subsection{Intervening with Concept Embeddings}
+As in vanilla CBMs, MixCEMs support test-time concept interventions. To intervene on concept $c_i$, one can update $\hat{\mathbf{c}}_i$ by swapping the output concept embedding for the one semantically aligned with the concept ground truth label. For instance, if for some sample $\mathbf{x}$ and concept $c_i$ a MixCEM predicted $\hat{p}_i = 0.1$ while a human expert knows that concept $c_i$ is active ($c_i=1$), they can perform the intervention $\hat{p}_i := 1$. This operation updates MixCEM's bottleneck by setting $\hat{\mathbf{c}}_i$ to $\hat{\mathbf{c}}^+_i$ rather than $\big(0.1 \hat{\mathbf{c}}^+_i + 0.9 \hat{\mathbf{c}}^-_i\big)$. Such an update allows the downstream label predictor to act on information related to the corrected concept.
+
+In addition, we introduce \textit{RandInt}, a regularisation strategy exposing MixCEMs to concept interventions during training to improve the effectiveness of such actions at test-time. RandInt randomly performs independent concept interventions during training with probability $p_\text{int}$ (i.e., $\hat{p}_i$ is set to $\hat{p}_i := c_i$ for concept $c_i$ with probability $p_\text{int}$). In other words, for all concepts $c_i$, their embeddings during training are computed as:
+\[
+    \hat{\mathbf{c}}_i = \begin{cases}
+        \big(c_i \hat{\mathbf{c}}^+_i + (1 - c_i) \hat{\mathbf{c}}^-_i\big) & \text{with probability } p_\text{int} \\
+        \big(\hat{p}_i \hat{\mathbf{c}}^+_i + (1 - \hat{p}_i) \hat{\mathbf{c}}^-_i\big) & \text{with probability } (1 - p_\text{int})
+    \end{cases}
+\]
+
+while at test-time we always use the predicted probabilities for performing the mixing. During backpropagation, this strategy forces feedback from the downstream task to update only the correct concept embedding (e.g., $\hat{\mathbf{c}}^+_i$ if $c_i = 1$) while feedback from concept predictions can update both $\hat{\mathbf{c}}^+_i$ and $\hat{\mathbf{c}}^-_i$. Under this view, RandInt can be thought of as learning an average over an exponentially large family of MixCEM models (similarly to dropout~\citep{srivastava2014dropout}) where some of the concept representations are trained using only feedback from their concept label while others receive training feedback from both their concept and task labels. In the extreme case when the embedding size is $m = 1$ and we only have one concept (i.e., $k = 1$), this process can be seen as randomly alternating between learning a Joint-CBM and a Sequential-CBM during training, with $p_\text{int}$ controlling how often we switch between joint training and sequential training.
+
+
+\subsection{Interventions}
+
+\paragraph{MixCEM supports effective concept interventions and is more robust to incorrect interventions (Figure~\ref{fig:interventions}).} When describing our MixCEM architecture, we argued in favour of using a mixture of two semantic embeddings for each concept as this would permit test-time interventions which can meaningfully affect entire concept embeddings. In Figure~\ref{fig:interventions} left and center-left, we observe, as hypothesised, that using a mixture of embeddings allows MixCEMs to be highly responsive to random concept interventions in their bottlenecks. Notice that as predicted, although all models have a similar concept accuracy, we observe that Hybrid CBMs, while highly accurate without interventions, quickly fall short against even scalar-based CBMs once several concepts are intervened in their bottlenecks. In fact, we observe that interventions in Hybrid CBM bottlenecks have little effect on their predictive accuracy, something that did not change if logit concept probabilities were used instead of sigmoidal probabilities. More interestingly, however, we see in Figure~\ref{fig:interventions} center-right and right that when we perform intentionally incorrect interventions (where a concept is set to the wrong value), MixCEM's performance hit is not as sharp as that of CBMs with scalar representations. We believe this is a consequence of MixCEM's ``incorrect'' embeddings still carrying important task-specific information which can then be used by the label predictor to produce more accurate task labels. Finally, by comparing the effect of interventions in both MixCEMs and MixCEMs trained without RandInt, we observe that RandInt in fact leads to a model that is not just significantly more receptive to interventions, but is also able to outperform even scalar-based CBMs when large portions of their bottleneck are artificially set by experts. This suggests that our proposed architecture can not only be trusted in terms of its downstream predictions and concept explanations, as seen above, but it can also be a highly effective model when used along with experts that can correct mistakes in their concept predictions.
+
+% \begin{figure}[!h]
+%     \centering
+%     \includegraphics[width=1.\textwidth]{fig/interventions_complete_with_adversarial.png}
+%     \caption{Effects of performing positive random concept interventions (left and center left) and intentionally incorrect interventions (center right and right) for different concept representations in CUB and CelebA. As in~\citep{koh2020concept}, when intervening in CUB we intervene using groups of concepts which are mutually exclusive.}
+%     \label{fig:interventions}
+% \end{figure}
 
 \section{Robustness and Cost Effectiveness}
 
@@ -483,6 +873,292 @@ Research questions: how would this approach compare with existing approaches (po
 \section{Fantastic Concepts and Where to Find Them}
 
 \section{Encoding Concepts in Neural Networks}
+\paragraph{Concept distillation}
+The first CDM step consists in extracting node-level clusters corresponding to concepts from the GNN's latent space. This is based on the observation that the arrangement of the activation space shows similarities to human perceptual judgement~\citep{zhang2018unreasonable}, as shown by GCExplainer~\citep{magister2021gcexplainer} for GNNs. However, in contrast to GCExplainer, in CDM this step is differentiable and integrated in the network architecture, allowing gradients to optimize clusters in GNN embeddings. Specifically, we implement this differentiable clustering using a normalized softmax activation on the node-level embeddings $\mathbf{h}_i$, associating each node with one cluster/concept. This operation returns for each node a fuzzy encoding $\mathbf{q}_i \in [0,1]^s$:
+\begin{equation} \label{eq:diffGCExp}
+    \tilde{\mathbf{q}}_i = \frac{\exp({\mathbf{h}_i})}{\sum_{u=1}^s \exp(\mathbf{h}_{iu})}, \qquad \mathbf{q}_i = \frac{\tilde{\mathbf{q}}_i}{\max_i \tilde{\mathbf{q}}_i + \epsilon}
+\end{equation}
+where $s$ is the size of the encoding vector. CDM then clusters nodes considering the similarity of their fuzzy encodings $\mathbf{q}_i$. Specifically, CDM groups the samples together depending on their Booleanized encoding $\mathbf{r}_i \in \{0,1\}^s$:
+\begin{equation}
+    \mathbf{r}_{iu} = 
+    \begin{cases}
+    1 \quad \text{ if } \mathbf{q}_{iu} \geq \tau\\
+    0 \quad \text{ otherwise }
+    \end{cases}
+    % \mathbb{I}_{\mathbf{q}_i \geq \epsilon}
+\end{equation}
+where $\tau \in [0,1]$ is conventionally set to $0.5$.
+In particular, two samples $a$ and $b$ belong to the same cluster if and only if their encodings $\mathbf{r}_a$ and $\mathbf{r}_b$ match.  For example, consider the two node embeddings $\mathbf{h}_a = [-1.2, 2.3]$ and $\mathbf{h}_b = [2.2, 1.8]$. For these inputs, the normalized softmax would return the fuzzy encodings $\mathbf{q}_a = [0.0293, 0.9707]$ and $\mathbf{q}_b = [0.5987, 0.4013]$, respectively. As their Booleanizations $\mathbf{r}_a = [0, 1]$ and $\mathbf{r}_b = [1, 0]$ do not match, we can then conclude that the two nodes belong to different clusters. Notice how our concept encoding is highly efficient, as it allows to learn up to $2^s$ different concepts on GNN embeddings $\mathbf{h}_i$ of size $s$. This way the GNN can dynamically find the optimal number of concepts/clusters, thus relieving users from this burden. In fact, users just need to choose an upper bound to the number of concepts $s$ rather than an exact value, as when using k-Means like in GCExplainer. In order to account for graph classification, the concept encodings for a graph are pooled before being passed to the interpretable model predicting the task, as explained in the next paragraph.
+% On the other hand, the softmax function puts $\mathbf{q}_i$ elements in competition, thus encouraging the model to identify only a few concepts.
+
+\paragraph{Interpretable predictions}
+The second CDM step consists of using the distilled concepts to make interpretable predictions for downstream tasks. In particular, the presence of concepts enables pairing GNNs with existing concept-based methods which are explainable by design, such as Logic Explained Networks (LENs,~\citep{ciravegna2021logic}). LENs are neural models providing simple concept-based logic explanations for their predictions. Specifically, LENs can provide class-level explanations which makes our approach the first at providing unique global explanations for GNNs. CDM uses a LEN as the readout function $f$ for the classification, applying it on top of concept representations $\mathbf{q}_i$. For graph classification tasks, the input data is composed of a set of $t$ graphs $G^j \in \{(V^j, E^j)\}_{j=1}^t$, where each graph is associated with a task label $y^j \in Y$. In this setting, GNN-based models predict a single label for each graph $G^j$ by pooling its node-level encodings $\mathbf{q}_i^j$ to aggregate over multiple concepts:
+\begin{equation} \label{eq:lens}
+    \hat{y}_i = \text{LEN}_{\text{node}} ( \mathbf{q}_i), \qquad
+    \hat{y}^j = \text{LEN}_{\text{graph}} \Bigg(\frac{1}{n_j} \sum_{i=1}^{n_j} \mathbf{q}_i^j \Bigg)
+\end{equation}
+where $n_j$ is the number of nodes associated with graph $j$. In our implementation, we use the entropy-based layer to implement LENs~\citep{barbiero2021entropy}) as it can provide high classification accuracy with high-quality logic explanations. This entropy-based layer implements a sparse attention layer designed to work on top of concept activations.
+% \begin{equation} \label{eq:alpha}
+%     \alpha^i = \frac{e^{\gamma^i/\tau}}{\sum_{l=1}^k e^{\gamma^i_l/\tau}}
+% \end{equation}
+The attention mechanism allows the model to focus on a small subset of concepts to solve each task. It also introduces a parsimony principle in the architecture corresponding to an intuitive human cognitive bias~\citep{miller1956magical}. This parsimony principle allows the extraction of simple logic explanations from the network, thus making these models explainable by design. 
+
+% \paragraph{Interactive Concept-based Graph Layer}
+% The Interactive Concept-based Graph Layer combines DGCExplainer and E-LENs. Conceptually, the layer first performs concept discovery using the normalised softmax activation function to associate each node embedding with a concept encoding. In order to account for graph classification, the concept encodings for a graph are pooled using global mean pooling before being passed to E-LENs. We propose global mean pooling over minimum or maximum pooling of concept representations, as it will give an average idea of the activation of a feature. We implement the Interactive Concept-based Graph Layer in the following way:
+% \begin{equation} \label{eq:lens}
+%     (y, \phi) = LEN(\frac{1}{n} \sum_{i=1}^{n}q_i)
+% \end{equation}
+% where $n$ is the number of nodes associated with graph $j$. 
+% The components of the layer are fully differentiable, allowing to train the model using classical methods, and making it explainable-by-design. Furthermore, the concept encoding component of the layer allows for human intervention, as the concept encoding may be corrected after the training of the network to improve model performance.
+
+\paragraph{Concept-based and logic-based explanations}
+The proposed method provides two types of explanations: concept-based and logic-based explanations. Global concept-based explanations can be extracted in a similar manner as in GCExplainer: a concept for a node or graph is extracted by finding the cluster with which a node's embedding is associated, and visualising the samples closest to the cluster centroid. The logic-based formula provided per class broadens the explanation scope, as it indicates which neurons of the concept encoding $\mathbf{q}_i$ are activated and representative of a class. This provides a more comprehensive explanation since a class can be associated with multiple concepts. 
+
+\paragraph{Concept interventions}
+As in Concept Bottleneck Models~\citep{koh2020concept}, our approach supports human interaction at concept level. In fact, in contrast to existing post-hoc methods, an explainable-by-design approach creates an explicit concept layer which can positively react to test-time human interventions. For instance, consider a misclassified node with concept encoding $\mathbf{q}_a = [0.21, 0.93]$. Assume that the vast majority of nodes with the binary encoding $\mathbf{r}_{\text{grid\_node}} = [0, 1]$ are nodes of a grid-like structure, which allows a human to label this cluster as ``grid nodes''. Now, a human expert can inspect the neighborhood of the misclassified node and realize that this node belongs to a circle-like structure and not to a grid structure. As the binary encoding for the concept ``circle nodes'' is $\mathbf{r}_{\text{circle\_node}} = [1, 1]$, the user can easily apply an intervention to correct the misclassified concept by changing its encoding to $\mathbf{q}_a:=[1, 1]$. Such an update allows the interpretable readout function to act on information related to the corrected concept, thus improving the original model prediction.
+
+\section{Experiments and results}
+
+\begin{table*}[!t]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lllllll}
+\toprule     & \multicolumn{2}{c}{\textbf{\begin{tabular}[c]{@{}c@{}}Model Accuracy (\%)\end{tabular}}} & \multicolumn{2}{c}{\textbf{\begin{tabular}[c]{@{}c@{}}Concept  Completeness (\%)\end{tabular}}} & \multicolumn{2}{c}{\textbf{\begin{tabular}[c]{@{}c@{}}Concept  Purity\end{tabular}}} \\
+                       & \multicolumn{1}{c}{\textbf{CGN}}      & \multicolumn{1}{c}{\textbf{Vanilla GNN}}      & \multicolumn{1}{c}{\textbf{CGN}}          & \multicolumn{1}{c}{\textbf{Vanilla GNN}}         & \multicolumn{1}{c}{\textbf{CGN}}      & \multicolumn{1}{c}{\textbf{Vanilla GNN}}      \\ \midrule
+\textbf{BA-Shapes}     & \textbf{98.11 (97.04, 99.18)}         & 98.02 (96.40, 99.65)                          & \textbf{98.11 (96.85, 99.36)}             & 93.69 (86.21, 100.00)                            & \textbf{0.00 (0.00, 0.00)}            & 0.00 (0.00, 0.00)                             \\
+\textbf{BA-Community}  & 85.67 (81.38, 89.95)        & \textbf{87.50 (85.56, 89.45)}                 & \textbf{83.10 (78.90, 87.29)}             & 75.74 (72.85, 78.64)                             & 1.70 (0.43, 3.83)            & \textbf{1.60 (0.49, 2.71)}                    \\
+\textbf{BA-Grid}       & 99.51 (98.75, 100.00)        & \textbf{99.71 (99.38, 100.00)}                & 99.61 (98.80, 100.00)                     & \textbf{99.71 (99.38, 100.00)}                   & \textbf{0.20 (0.00, 0.76)}            & 2.40 (0.00, 6.48)                             \\
+\textbf{Tree-Cycle}    & \textbf{94.97 (92.50, 97.44)}         & 86.26 (58.58, 100.00)                         & \textbf{91.98 (83.71, 100.00)}            & 91.16 (84.47, 97.86)                             & \textbf{0.00 (0.00, 0.00)}            & 0.60 (0.00, 2.27)                              \\
+\textbf{Tree-Grid}     & \textbf{95.17 (93.59, 96.75)}         & 94.54 (93.61, 95.46)                          & \textbf{91.37 (84.58, 98.16)}             & 78.48 (76.17, 80.79)                             & \textbf{0.00 (0.00, 0.00)}            & 0.00 (0.00, 0.00)                              \\
+\textbf{Mutagenicity}  & \textbf{82.40 (81.31, 83.48)}         & 82.35 (81.64, 83.06)                          & 63.40 (58.84, 67.96)            & \textbf{63.95 (60.14, 67.77)}                    & 1.00 (0.00, 3.78)                     & \textbf{0.60 (0.00, 2.27)}                    \\
+\textbf{Reddit-Binary} & 90.55 (87.95, 93.15)                  & \textbf{91.20 (88.82, 93.58)}                 & \textbf{75.91 (61.16, 90.66)}             & 73.10 (58.44, 87.75)                  & 0.40 (0.00, 1.51)                     & \textbf{0.00 (0.00, 0.00)}                   \\ \bottomrule
+\end{tabular}%
+}
+\caption{Model accuracy and concept completeness for the Concept-based Graph Network (CGN) and an equivalent vanilla GNN. For these results, and those that follow, we compute all metrics on test sets across five seeds and report their mean and $95\%$ confidence intervals.}
+    \label{fig:accuracy}
+\end{table*}
+
+
+% \newcommand\conceptsizef{30}
+% \newcommand\vfigsf{-.5\height}
+
+% % \newcommand\conceptsizef{60}
+% % \newcommand\vfigsf{-.3\height}
+% % Please add the following required packages to your document preamble:
+% % \usepackage{graphicx}
+% \begin{table*}[!t]
+% \centering
+% \renewcommand{\arraystretch}{1}
+% \resizebox{\textwidth}{!}{%
+% \begin{tabular}{cccccccc}
+% \toprule
+%  & \textbf{BA-Shapes} & \textbf{BA-Grid} & \textbf{Tree-Grid} & \textbf{Tree-Cycle} & \textbf{BA-Community} & \textbf{Mutagenicity} & \textbf{Reddit-Binary} \\
+% \midrule
+% \textbf{Ground Truth} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/house.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/grid.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/grid.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/ring.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/house.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/ring.pdf}}  \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/no2.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/star.pdf}}  \\
+% \textbf{Extracted Concept} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/BA_Shapes_concept_5.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/BA_Grid_concept_2.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/Tree_Grid_concept_21.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/Tree_Cycle_concept_8.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/BA_Community_concept_30.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/Mutagenicity1.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/Reddit_Binary_concept_24.pdf}}  \\
+% \bottomrule\\
+% \end{tabular}%
+% }
+% \caption{The Concept Distillation Module detects meaningful concepts matching the expected ground truth. Blue nodes are the instances being explained, while orange nodes represent their $p$-hop neighbors. Similar motifs are identified by GCExplainer.}
+% \label{tab:concept_visuals}
+% \end{table*}
+
+
+%\subsection{Task Accuracy and Completeness}
+\paragraph{Concept Graph Networks are as accurate as vanilla GNNs (Table \ref{fig:accuracy})}
+Our results show that CDM allows GNNs to achieve better or comparable task accuracy w.r.t. equivalent GNN architectures. Specifically, our approach outperforms vanilla GNNs on the Tree-Cycle dataset, having a higher test accuracy (plus $\sim 8\%$ on average) and less variance across different parameter initializations. We hypothesize that this effect is due to more stable and pure concepts being learnt thanks to CDM, as we will see later when discussing the concept purity scores. We do not observe any significant negative effect of using CDM on the generalization error of GNNs.
+
+
+\paragraph{The Concept Distillation Module discovers complete concepts (Table \ref{fig:accuracy})}
+Our experiments show that overall CDM discovers a more complete set of concepts w.r.t. the concept set extracted by GCExplainer on equivalent GNN architectures. This is particularly emphasized in the Tree-Grid, BA-Shapes and BA-Community datasets, where CDM significantly outperforms GCExplainer by up to $\sim 13\%$. For the other datasets, the proposed approach matches the concept completeness scores of GCExplainer. The completeness scores on the BA-Grid and Mutagenicity datasets are only slightly lower, however, within the margins of the confidence interval. In absolute terms, CDM discovers highly complete sets of concepts with completeness scores close to the model accuracy for the synthetic datasets. 
+% As there is a 1-to-1 mapping between clusters and concepts, concept completeness can be visualized as a clear separation in the node embeddings, as exemplified in \ref{fig:ba_shapes_clustering}.
+
+
+%\subsection{Concept Interpretability}
+\paragraph{The Concept Distillation Module identifies meaningful concepts (Table~\ref{tab:concept_visuals})}
+CDM discovers high-quality concepts, which are meaningful to humans. Similarly to GCExplainer, our results demonstrate that CDM can discover concepts corresponding to the ground truth motifs embedded in the toy datasets. For example, our approach recovers the ``house motif'' in BA-Shapes. Moreover, CDM proposes plausible concepts for the real-world datasets where ground truth motifs are lacking. In this case, the extracted concepts match the desirable motifs suggested by~\citet{ying2019gnnexplainer}, corresponding to ring structures and the nitrogen dioxide compound in Mutagenicity, and a star-like structure in Reddit-Binary. 
+% Figure~\ref{fig:concept_visuals} also reports for each discovered concept the corresponding binary encoding representing the concept signature learnt by the Concept Distillation Module. 
+As we use the same visualization technique as GCExplainer the merit of our contribution lies in the discovery of a more descriptive set of concepts, which includes rare and fine-grained concepts. As a thorough qualitative comparison with GCExplainer requires exhaustive visualization, we refer the reader to the Appendix for a complete set of results.
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/fine_concept_visualization.pdf}
+%     \caption{The Concept Graph Module detects concepts more fine-grained than the simple ground truth motif encoded.}
+%     \label{fig:outliers}
+% \end{figure}
+
+
+% \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/house_concepts.pdf}}
+
+% \renewcommand\conceptsizef{50}
+
+% \begin{table}[!t]
+% \resizebox{\columnwidth}{!}{%
+% \begin{tabular}{ccccc}
+% \toprule
+% \textbf{Ground Truth} & \multicolumn{2}{c}{\textbf{Fine-Grained Concepts}} & \multicolumn{2}{c}{\textbf{Rare Concepts}} \\
+% \midrule
+% \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/house_concepts.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/BA_Shapes_finegrained2.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/BA_Shapes_finegrained5.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/BA_Shapes_rare_motif17.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/BA_Shapes_rare_motif20.pdf}} \\
+% \bottomrule\\
+% \end{tabular}%
+% }
+% \captionsetup{width=\columnwidth}
+% \caption{The Concept Distillation Module detects concepts more fine-grained than the simple ground truth motif encoded as well as rare motifs. Blue nodes are the instances being explained, while orange nodes represent their $p$-hop neighbors. Notably, GCExplainer gives no indication of rare concepts.}
+% \label{fig:rare_concepts}
+% \end{table}
+
+
+% \begin{figure}[!t]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/explanation_visualization.pdf}
+%     \caption{Visualisations of an example concept per dataset, as well as the binary concept encoding generated by the Concept Distillation Module.}
+%     \label{fig:concept_visuals}
+% \end{figure}
+
+% Figure \ref{fig:purity} visualises the minimum, maximum and median purity score of concepts extracted using our model versus those extracted from the vanilla GNN using GCExplainer. In regards to the minimum purity score, both our method and GCExplainer obtain a perfect score of 0 for the BA-Shapes and Tree-Grid dataset. Reviewing the maximum concept purity score across datasets, it can be stated that our method outperforms GCExplainer on the BA-Shapes, BA-Grid and Tree-Cycle dataset, however, performs worse on the remaining datasets. Regarding the median, it can be stated that our method and GCExplainer are of similar quality with each method extracting more pure concepts on different datasets.
+
+\paragraph{The Concept Distillation Module identifies rare and fine-grained concepts (Table~\ref{fig:rare_concepts})}
+CDM discovers more fine-grained concepts than just the ``house motif'' suggested by GNNExplainer, as it can differentiate whether a middle or bottom node is on the far or near side of the edge attaching to the BA graph. This matches the quality of concepts extracted by GCExplainer. In contrast to GCExplainer, CDM also identifies rare concepts. Rare motifs are present in toy datasets through the insertion of random edges. As the proposed approach can find the optimal number of clusters/concepts dynamically, clusters of a very small size possibly represent rare motifs. To check the presence of rare concepts, we visualize the $p$-hop neighbors of nodes found in small clusters. For example, CDM identifies a rare concept represented as a ``house'' structure attached to the BA graph via the top node of the house in the BA-Shapes dataset. This represents a rare concept as it is generated by the insertion of a random edge. We confirm this observations in other toy datasets, such as BA-Community and Tree-Cycle, where motifs with random edges are clearly identified. We have not identified rare concepts in BA-Grid or Tree-Grid, which may be attributed to the random edges being distributed within the base graph, which has a less definite structure. Due to the lack of expert knowledge, we cannot confirm whether the rare motifs found in Mutagenicity and Reddit-Binary align with human expectations.
+
+
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/outlier_visualization.pdf}
+%     \caption{Concepts corresponding to rare motifs detected by the proposed Concept Graph Module.}
+%     \label{fig:outliers}
+% \end{figure}
+
+
+
+
+%\subsection{Explanation performance}
+\paragraph{The Concept Distillation Module identifies pure concepts (Table~\ref{fig:accuracy})}
+CDM discovers high-quality concepts, which are coherent across samples, as measured by concept purity. In terms of purity, our approach discovers concepts with nearly optimal scores in toy datasets, with a graph edit distance close to zero. For these datasets, CDM provides either better or comparable purity scores when compared to GCExplainer. CDM provides slightly worse purity scores in both the Mutagenicity and Reddit-Binary datasets. However, also in this case the absolute purity of CDM is almost optimal.
+
+% \vspace{-0.5cm}
+% \begin{wrapfigure}{r}{0.6\textwidth}
+%   \begin{center}
+%     \includegraphics[width=0.6\textwidth]{fig/purity.pdf}
+%     \caption{Purity scores for the concept extracted by Concept Graph Module and GCExplainer. Notice how the optimal purity score is zero, as it measures the graph edit distance between concept instances~\citep{magister2021gcexplainer}.}
+%     \label{fig:purity}
+%     \end{center}
+% \end{wrapfigure}
+
+% \begin{minipage}{0.4\textwidth}
+% \paragraph{The Concept Distillation Module identifies pure concepts (Figure~\ref{fig:purity})}
+% CDM discovers high-quality concepts, which are coherent across samples, as measured by concept purity. In terms of purity, our approach discovers concepts with nearly optimal scores in toy datasets, with a graph edit distance close to zero. For these datasets, CDM provides either better or comparable purity scores when compared to GCExplainer. CDM provides slightly worse purity scores in both the Mutagenicity and Reddit-Binary datasets. However, also in this case the absolute purity of CDM is almost optimal.
+% \end{minipage}
+% \hspace{0.02\textwidth}
+% \begin{minipage}{0.55\textwidth}
+% % \begin{figure}[!h]
+%     \includegraphics[width=\textwidth]{fig/purity.pdf}
+%     \captionof{figure}{Purity scores for the concept extracted by Concept Graph Module and GCExplainer. Notice how the optimal purity score is zero, as it measures the graph edit distance between concept instances~\citep{magister2021gcexplainer}.}
+%     \label{fig:purity}
+% % \end{figure}
+% \end{minipage}
+
+% \paragraph{The Concept Distillation Module identifies pure concepts (Figure~\ref{fig:purity})}
+% CDM discovers high-quality concepts, which are coherent across samples, as measured by concept purity. In terms of purity, our approach discovers concepts with nearly optimal scores in toy datasets, with a graph edit distance close to zero. For these datasets, CDM provides either better or comparable purity scores when compared to GCExplainer. CDM provides slightly worse purity scores in both the Mutagenicity and Reddit-Binary datasets. However, also in this case the absolute purity of CDM is almost optimal.
+% \end{minipage}
+% \hspace{0.02\textwidth}
+% \begin{minipage}{0.55\textwidth}
+% % \begin{figure}[!h]
+%     \includegraphics[width=\textwidth]{fig/purity.pdf}
+%     \captionof{figure}{Purity scores for the concept extracted by Concept Graph Module and GCExplainer. Notice how the optimal purity score is zero, as it measures the graph edit distance between concept instances~\citep{magister2021gcexplainer}.}
+%     \label{fig:purity}
+% % \end{figure}
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=0.5\textwidth]{fig/purity.pdf}
+%     \caption{The minimum purity across concepts discovered by the proposed Concept Graph Module (CGM) and GCExplainer for an equivalent vanilla GNN.}
+%     \label{fig:purity}
+% \end{figure}
+
+\paragraph{The Concept Distillation Module provides accurate logic explanations (Table \ref{fig:lens}, Table~\ref{tab:logic_explanations})}
+LEN allows CDM to provide simple and accurate logic explanations for task predictions. The accuracy of the logic explanations extracted reaches at least $90\%$ for the BA-Shapes, BA-Grid and Tree-Cycle datasets, indicating that CDM derives a precise description of the model decision process. Relating the accuracy of explanations back to the model accuracy, we observe that the explanation accuracy is bounded by task performance, as already noticed by~\citet{ciravegna2021logic}. This explains the slightly lower logic explanation accuracy on the real-world datasets, which can be ascribed to the absence of definite ground-truth concepts and to the classification task being more complex. Besides being accurate, logic explanations are very short, with a complexity below $4$ terms. In conjunction with the explanation accuracy, this means that CDM finds a small set of predicates which accurately describes the most relevant concepts for each class. % We refer the reader to appendix \ref{appendix:homogenity} for a further evaluation on concept homogeneity.
+
+% \begin{figure*}[!h]
+%     \centering
+    
+%     % \includegraphics[width=0.8\textwidth]{fig/lens.pdf}
+%     \caption{Accuracy and complexity of logic explanations provided by the proposed Concept Graph Module. The accuracy is computed using logic formulas to classify samples based on their concept encoding. Explanation complexity measures the number of minterms in logic formulas.}
+%     \label{fig:lens}
+% \end{figure*}
+
+\begin{table}[]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lll}
+\toprule
+     & \textbf{\begin{tabular}[c]{@{}l@{}}Logic Explanation\\ Accuracy (\%)\end{tabular}} & \textbf{\begin{tabular}[c]{@{}l@{}}Logic Explanation\\ Complexity\end{tabular}} \\ \midrule
+\textbf{BA-Shapes}   & 96.56 (92.17, 100.95)                                                         & 3.10 (2.75, 3.45)                                                               \\
+\textbf{BA-Community}    & 81.43 (78.20, 84.66)                                                          & 3.85 (3.09, 4.61)                                                               \\
+\textbf{BA-Grid}     & 99.61 (98.86, 100.36)                                                         & 1.30 (0.74, 1.86)                                                               \\
+\textbf{Tree-Cycle}  & 90.49 (78.43, 102.55)                                                         & 1.90 (1.22, 2.58)                                                               \\
+\textbf{Tree-Grid}   & 89.66 (82.71, 96.62)                                                          & 2.20 (1.07, 3.33)                                                               \\
+\textbf{Mutagenicity}      & 59.94 (44.99, 74.90)                                                          & 2.60 (0.88, 4.32)                                                               \\
+\textbf{Reddit-Binary} & 71.84 (54.10, 89.59)                                                          & 1.60 (1.08, 2.12)                                                               \\ \bottomrule
+\end{tabular}%
+}
+    \caption{Accuracy and complexity of logic explanations provided by the proposed Concept Distillation Module. The accuracy is computed using logic formulas to classify samples based on their concept encoding. Explanation complexity measures the number of minterms in logic formulas.}
+    \label{fig:lens}
+\end{table}
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/formulas.pdf}
+%     \caption{An example of a concept-based logic explanations discovered by the Concept Distillation Module for each dataset.}
+%     \label{fig:logic_explanations}
+% \end{figure}
+
+% \scalerel*{\includegraphics{fig/logic_expl_graphs/BA_Shapes_concept_3.pdf}}{B}
+
+% \resizebox{\textwidth}{!}{%
+% \input{logic_expl}
+% }
+
+% \newcommand\conceptsize{20}
+% \newcommand\vfigs{-.3\height}
+% % Please add the following required packages to your document preamble:
+% % \usepackage{graphicx}
+% \begin{table*}[!h]
+% \centering
+% \renewcommand{\arraystretch}{1}
+% \resizebox{0.8\textwidth}{!}{%
+% \begin{tabular}{llll}
+% \toprule
+% \textbf{Dataset} & \textbf{Concept-based Logic Explanation} & \multicolumn{2}{l}{\textbf{Ground Turth Concepts}} \\
+% \midrule
+% \textbf{BA-Shapes} & $y =2\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Shapes_concept_3.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Shapes_concept_5.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/house.pdf}}  & \textit{Node in house motif} \\
+% \textbf{BA-Grid} & $y=1\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Grid_concept_2.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/grid.pdf}}  & \textit{Node in grid motif}  \\
+% \textbf{Tree-Grid} & $y=1\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Tree_Grid_concept_21.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Tree_Grid_concept_32.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/grid.pdf}}  & \textit{Node in grid motif} \\
+% \textbf{Tree-Cycle} & $y=1\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Tree_Cycle_concept_0.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Tree_Cycle_concept_8.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Tree_Cycle_concept_11.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/ring.pdf}}  & \textit{Node in circle motif} \\
+% \textbf{BA-Community} & $y=3\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Community_concept_29.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Community_concept_30.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Community_concept_33.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/house.pdf}}  & \textit{Node in house motif} \\
+% \textbf{Reddit-Binary} & $y =\text{``Q/A''}\rightarrow$  \raisebox{\vfigs}{\includegraphics[height=\conceptsize  pt]{fig/logic_expl_graphs/Reddit_Binary_concept_24.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize  pt]{fig/logic_expl_graphs/Reddit_Binary_concept_27.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/star.pdf}}  & \textit{Star motifs} \\
+% \textbf{Mutagenicity} & $y =\text{``mutagenic''}\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Mutagenicity1.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/ring.pdf}} \raisebox{\vfigs}{\includegraphics[height=28 pt]{fig/logic_expl_graphs/no2.pdf}}  & \textit{Ring motifs or NO$_{\text{2}}$} \\
+% \bottomrule\\
+% \end{tabular}%
+% }
+% \caption{An example of a concept-based logic explanations discovered by the Concept Distillation Module per dataset. Blue nodes are the instances being explained, while orange nodes represent their $p$-hop neighbors. For Mutagenicity the color of each node represents a different chemical element. The logic formulae describe how the presence of concepts can be used to infer task labels. For example, the first logic rule states that the task label ``middle nodes in house motifs'' ($y=2$) can be inferred from the concepts: ``middle node with attaching edge on the near side'' or ``middle node with attaching edge on the far side''.}
+% \label{tab:logic_explanations}
+% \end{table*}
+
+%\subsection{Interventions}
+\paragraph{The Concept Distillation Module supports human interventions (Figure~\ref{fig:interventions})}
+Supporting human interventions is one of the main benefits of more interpretable architectures that learn tasks as a function of concepts. In contrast to vanilla GNNs, CDM enables interventions at concept-level, which allows human experts to correct mispredicted concepts. Similarly to Concept Bottleneck Models~\citep{koh2020concept}, our results show that correcting concept assignments significantly improves the model test accuracy to over $98\%$ for the synthetic datasets, achieving $100\%$ test accuracy on BA-Grid and BA-Shapes. We also observe an increase in task accuracy in BA-Community, however, the increase is much more gradual. Most notably, in both real-world datasets CDMs allow GNNs to improve their task accuracy by up to $\sim + 10\%$ with less than $10$ interventions.
+
+% % \vspace{-0.5cm}
+% \begin{figure*}[!t]
+%     \centering
+%     \includegraphics[width=0.45\textwidth]{fig/expl_intervention.pdf}
+%     \includegraphics[width=0.25\textwidth]{fig/interventions.pdf}
+%     \caption{The Concept Distillation Module supports interventions at concept-level, allowing human experts to correct mispredicted concepts (left), increasing human trust in the model~\citep{shen2022trust}. This interaction  significantly improves task performance, achieving almost $100\%$ accuracy on synthetic datasets (right).}
+%     \label{fig:interventions}
+% \end{figure*}
+
+
 
 \section{Removing Shortcuts to Concepts}
 
@@ -507,6 +1183,371 @@ Next steps: scale to non-GNN models which might be tricky because in GNNs cluste
     \item Han Xuanyuan, Pietro Barbiero, ..., and Pietro Lio' Analysing the Neurons of Graph Neural Networks: Towards Concept-Based Global Interpretability. \textit{arXiv preprint arXiv:XXXX.YYYYY}, 2023
     \item \bibentry{magister2022encoding}
 \end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Concepts for logic explanations:
+%%
+\chapter{Concept-based Logic Explanations of Neural Networks} \label{chapter:lens}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+\textit{In this chapter I will explain how concepts can be used to train more interpretable models. In particular, I will focus on my contributions in inventing Logic Explained Networks (LENs)~\citep{ciravegna2021logic}, a family of concept-based models providing first-order logic explanations for their predictions. I will describe LENs main architectures, learning paradigms, and logic rule extraction algorithms~\citep{barbiero2021entropy}. I will conclude the chapter showcasing LENs on a set of synthetic and real-world experiments demonstrating how LENs can provide highly accurate explanations with classification performances close to state-of-the-art models.}
+
+
+Summary to this point: to solve the problem of human trust in AI we need reliable models that can be accurate and provide explanations for their decisions, we want to know how! In this chapter I will explain how to design self-explaining models providing global and quantitative explanations for their predictions.
+
+\section{Motivation}
+
+Knowledge gap/Motivation: current solutions provide post-hoc, local, and qualitative explanations. Post-hoc is bad because the damage is done: whatever biases the model learnt during training can be identified but not changed. Local is bad because local explanations are brittle: explain a cherry-picked example or an outlier does not generalize. Qualitative is bad because it's not clear how general are explanations: would they hold on unseen samples? for how many samples would they hold? how to compare XAI models? Hence we want: self-explainable models providing global and quantitative explanations. Concept bottleneck models tried to solve the post-hoc problem architecturally/by design: they propose an architecture where models' predictions are conditioned on concepts. This way: predictions can be explained in terms of concepts being active/inactive. However, explanations are still qualitative e.g., this concept is important, this one is less important. Is it possible to formalize the explanation in a way that is not ambiguous and shows how the model used the concepts? Also, explanations are still local: for this sample this concept A is active, concept B is inactive, etc. How to provide global explanations?
+
+Contribution: a self-explainable model providing global and quantitative explanations.
+
+Key innovation: a sparse attention mechanism for concept bottleneck models.
+
+Expected outcome: The sparse attention allows the model to learn how to cherry-pick the most relevant concepts for each task and use only them for solving the task. This way the model learns how to solve the task using only a few concepts which can be active/inactive. This allows the extraction of logic explanations as the model is learning a logic mapping from (fuzzy) concepts to (classification) tasks.The logic explanations are simple thanks to the sparse attention mechanism. Without the attention mechanism the extraction of logic rules won't scale as the truth tables may explode (their size grows as exponentially with the number of concepts). Logic explanations can also be evaluated with quantitative metrics in terms of performance/interpretability: 
+
+- performance: prediction accuracy (using the logic formulae to predict unseen samples)
+
+- interpretability: complexity (the number of terms in a logic formula)
+
+Research questions: how would this approach compare with existing approaches? is it interpretable as white boxes in terms of rule complexity? is it accurate as black boxes? what's the accuracy-vs-explainability trade-off of the approach? is there any advantage of using this approach over existing methods?
+
+
+\section{Logic Explained Networks}
+
+\subsection{Generate Concept-based Logic Explanations}
+Any Boolean function can be converted into a logic formula in Disjunctive Normal Form (DNF) by means of its truth-table \citep{mendelson2009introduction}. 
+% We indicate with $\hat{f}^i$ the Boolean function represented by the truth table $\mathcal{T}^i$, $\hat{f}^i: \hat{C}^i \mapsto Y^i$, being $Y^i$ the $i$-th component of $Y$.
+%\sm{Following the notation defined at the end of Sec.~\ref{sec:con_awa}}, any $\bar{f}^i$ is a Boolean function over the set $\hat{C}^i$. %We denote with $\varphi_i$ the logic formula corresponding to the truth-table $\mathcal{T}^i$ of $\bar{f}^i$. 
+Converting a truth table into a DNF formula provides an effective mechanism to extract logic rules of increasing complexity from individual observations
+% , for cluster of samples,
+to a whole class of samples. 
+% In order to expliciteply write down the syntactic logic formula corresponding to any boolean function, we will use text strings in quotation marks corresponding to both concept and task symbols.
+% The following steps are repeated for any task function $f^i$.
+% [TODO] In the following, with a little abuse of notation, we will denote by $\bar{c}_j,\neg\bar{c}_j$ and $\bar{f}^i,\neg\bar{f}^i$ both the Boolean values and the human-understandable concept and task name and their negated, respectively, for every $j,i$. 
+The following rule extraction mechanism is applied to any empirical truth table $\mathcal{T}^i$ for each task $i$.
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=1\textwidth]{figs/truth-table.png}
+%     \caption{Caption}
+%     \label{fig:tt2form}
+% \end{figure}
+
+% %\vspace{-3mm}
+\paragraph{FOL extraction.}
+Each row of the truth table $\mathcal{T}^i$ can be partitioned into two parts that are a tuple of binary concept activations, $\hat{q}\in \hat{C}^i$, and the outcome of $\bar{f}^i(\hat{q}) \in \{0, 1\}$. 
+An \textit{example-level} logic formula, consisting in a single minterm, can be trivially extracted from each row for which $\bar{f}^i(\hat{q})=1$, by simply connecting with the logic AND ($\wedge$) the true concepts and negated instances of the false ones. 
+The logic formula becomes human understandable whenever concepts appearing in such a formula are replaced with human-interpretable strings that represent their name (similar consideration holds for $\bar{f}^i$, in what follows). For example, the following logic formula $\varphi^i_t$,
+\begin{equation}
+    \varphi^i_{t} = \textbf{c}_1\wedge\ \neg \textbf{c}_2 \wedge \ldots\wedge\textbf{c}_{m_i},
+    \label{eq:locexp}
+\end{equation}
+is the formula extracted from the $t$-th row of the table where, in the considered example, only the second concept is false, being $\textbf{c}_z$ the name of the $z$-th concept.
+Example-level formulas can be aggregated with the logic OR ($\vee$) to provide a \textit{class-level} formula, 
+\begin{equation}
+    \displaystyle\bigvee_{t \in S_i}\varphi^i_t, %= \displaystyle\bigvee_{\hat{c} \in S_i}\textbf{c}_1\wedge\ldots\wedge\textbf{c}_{m_i}
+\label{eq:agg_exp}
+\end{equation}
+being $S_i$ the set of rows
+ indices of $\mathcal{T}^i$ for which $\bar{f}^i(\hat{q}) = 1$, i.e. it is the support of $\bar{f}^i$.
+%Once $\varphi^i$ is built, given a concept tuple $\bar{c} \in \hat{C}^i$, we may measure the satisfiability of $\varphi^i$ on $\bar{c}$ by the truth-value of $\varphi^i(\bar{c})$ obtained by replacing boolean values with concept names in Eq. \ref{eq:agg_exp}. 
+%By construction the support of the class-level rule and of $\hat{f}^i$ coincide.
+We define with $\phi^i(\hat{c})$ the function that holds true whenever Eq.~\ref{eq:agg_exp}, evaluated on a given Boolean tuple $\hat{c}$, is true.
+Due to the aforementioned definition of support, we get the following class-level First-Order Logic (FOL) explanation for all the concept tuples,
+\begin{equation}
+\forall \hat{c} \in \hat{C}^i:\ \phi^i(\hat{c})\leftrightarrow\bar{f}^i(\hat{c}).
+\label{eq:FOL_C}
+\end{equation}
+We note that in case of non-concept-like input features, we may still derive the FOL formula through the ``concept decoder'' function $g$ (see Sec. \ref{sec:background}),
+\begin{equation}
+\forall x \in X:\ \phi^i\left(\xi(\overline{g(x)},\mu^i)\right)\leftrightarrow\bar{f}^i\left(\xi(\overline{g(x)},\mu^i)\right)
+\end{equation}
+An example of the above scheme for both example and class-level explanations is depicted on top-right of Fig. \ref{fig:awareness}.
+
+%\vspace{-3mm}
+\paragraph{Remarks.} The aggregation of many example-level explanations may increase the length and the complexity of the FOL formula being extracted for a whole class. However, existing techniques as the Quine–McCluskey algorithm can be used to get compact and simplified equivalent FOL expressions \citep{mccoll1878calculus,quine1952problem,mccluskey1956minimization}. For instance, the explanation (\textit{person} $\wedge$ \textit{nose}) $\vee$ ($\neg$\textit{person} $\wedge$ \textit{nose}) can be formally simplified in \textit{nose}.
+%\fg{mettere o omettere questo paragrafo?}
+%\paragraph{Remarks.}
+Moreover, the Boolean interpretation of concept tuples may generate colliding representations for different samples. For instance, the Boolean representation of the two samples $\{ (0.1, 0.7), (0.2, 0.9) \}$ is the tuple $\bar{c} = (0, 1)$ for both of them. This means that their example-level explanations match as well. %It is worth to notice that formally Eq. \ref{eq:FOL_C} relies on the fact that there are no two different concept tuples $c,d$ with $\bar{c}=\bar{d}$ such that $f^i(c)\neq f^i(d)$ for some $i$. 
+However, a concept can be eventually split into multiple finer grain concepts to avoid collisions. Finally, we mention that the number of samples for which any example-level formula holds (i.e. the support of the formula) is used as a measure of the explanation importance. In practice, example-level formulas are ranked by support and iteratively aggregated to extract class-level explanations, until the aggregation improves the accuracy of the explanation over a validation set.
+% For very large datasets, it may be useful to consider only the example-level formulas with the highest importance rate in order to drop outlier explanations out and to get simpler more focused explanations. 
+
+\subsection{The Entropy Layer}
+When humans compare a set of hypotheses outlining the same outcomes, they tend to have an implicit bias towards the simplest ones as outlined in philosophy \citep{soklakov2002occam,rathmanner2011philosophical},
+% aristotlePosterior, %hoffmann1996ockham,
+psychology \citep{miller1956magical,cowan2001magical}, and decision making \citep{simon1956rational,simon1957models,simon1979rational}.
+% , information theory \citep{mackay2003information}, and natural sciences \citep{wiley2011phylogenetics,ma2014changing}. 
+The proposed entropy-based approach encodes this inductive bias in an end-to-end differentiable model. The purpose of the entropy-based linear layer is to encourage the neural model to pick a limited subset of input concepts, allowing it to provide concise explanations of its predictions. The learnable parameters of the layer are the usual weight matrix $W$ and bias vector $b$. In the following, the forward pass is described by the operations going from Eq. \ref{eq:gamma} to Eq. \ref{eq:forward}
+while % and 
+the generation of the truth tables from which explanations are extracted 
+is formalized by % in 
+Eq. \ref{eq:sparse} and Eq. \ref{eq:truth-table}.
+
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=0.65\columnwidth]{LaTeX/figs/awareness_only_layer.pdf}
+%     \caption{A detailed view on one ``head'' of
+%     the entropy-based linear layer for the $1$-st class, emphasizing the role of the $k$-th input concept as example: (i) the scalar $\gamma_k^1$ (Eq.~\ref{eq:gamma}) is computed from the 
+%     set of weights connecting the $k$-th input concept 
+%     to the output neurons of the entropy-based layer;
+%     % $weight vector $W_k^1$, the weights associated to the $k$-th concept (Eq. \ref{eq:gamma}); 
+%     (ii) the relative importance of each concept is summarized by the categorical distribution $\alpha^1$ (Eq. \ref{eq:alpha}); (iii) rescaled relevance scores $\tilde{\alpha}^1$ drop irrelevant input concepts out (Eq. \ref{eq:drop}); (iv) hidden states $h^1$ (Eq. \ref{eq:forward}) and Boolean-like concepts $\hat{c}^1$ (Eq. \ref{eq:sparse}) are provided as outputs of the entropy-based layer.}
+%     \label{fig:awareness2}
+% \end{figure}
+
+The relevance of each input concept can be summarized in a first approximation by a measure that depends on the values of the weights connecting such concept to the upper network. In the case of network $f^i$ (i.e. predicting the $i$-th class) and of the $j$-th input concept, we indicate with $W_j^i$ the vector of weights departing from the $j$-th input (see Fig. \ref{fig:awareness2}), and we introduce
+%For the network $f^i$ (i.e. predicting the $i$-th class) the relevance of the $j$-th input concept is summarized in first approximation by the vector $W_j^i$ representing the weights connecting the $j$-th concept with the first layer of hidden neurons (see Fig \ref{fig:awareness}):
+\begin{equation} \label{eq:gamma}
+    \gamma^i_j = ||W^i_j||_1\ .
+\end{equation}
+The higher $\gamma^i_j$, the higher the relevance of the concept $j$ for the network $f^i$. In the limit case ($\gamma_j^i \rightarrow 0$) the model $f^i$ drops the $j$-th concept out.
+% Notice that since the vector $\gamma^i$ is computed for each class, hidden network layers are not shared among network outputs but are independent as shown in Fig \ref{fig:awareness}.
+To select only few relevant concepts for each target class, concepts are set up to compete against each other. To this aim, the relative importance of each concept to the $i$-th class is summarized in the categorical distribution 
+$\alpha^{i}$, composed of coefficients
+$\alpha^i_j \in [0,1]$ (with $\sum_j \alpha_j^i = 1$), modeled by the softmax function:
+\begin{equation} \label{eq:alpha}
+    \alpha^i_j = \frac{e^{\gamma^i_j/\tau}}{\sum_{l=1}^k e^{\gamma^i_l/\tau}}
+\end{equation}
+where $\tau \in \mathbb{R}^+$ is a user-defined temperature parameter to tune
+% the intrinsic tendency of 
+the softmax function. For a given set of $\gamma^i_j$, when using high temperature values ($\tau \rightarrow \infty$) all concepts have nearly the same relevance. For low temperatures values ($\tau \rightarrow 0$), the probability of the most relevant concept tends to $\alpha_j^i\approx 1$, while it becomes $\alpha_k^i\approx 0, \ k \neq j$, for all other concepts. For further details on the impact of $\tau$ on the model predictions and explanations (see Appendix).
+As the probability distribution $\alpha^i$ highlights the most relevant concepts, this information is directly fed back to the input, weighting concepts by the estimated importance. To avoid numerical cancellation due to values in $\alpha^i$ close to zero, especially when the input dimensionality is large,
+we replace $\alpha^i$ with its normalized instance $\tilde{\alpha}^i$, still  in $[0,1]^k$,
+and each input sample % represented by the concept tuple ù
+$c \in C$ is modulated by this %(normalized) 
+estimated importance, % weighted by the re-normalized vector $\hat{\alpha}^i \in [0,1]^k$:w
+\begin{equation} \label{eq:drop}
+    \tilde{c}^i = c \odot \tilde{\alpha}^i \qquad\qquad \text{with} \qquad \tilde{\alpha}_j^i = \frac{\alpha_j^i}{\max_u \alpha_u^i},
+\end{equation}
+where $\odot$ denotes the Hadamard (element-wise) product.
+The highest value in $\tilde{\alpha}^i$ is always $1$ (i.e. $\max_j \tilde{\alpha}_j^i = 1$) and it corresponds to the most relevant concept. 
+% All the other concepts are weighted by an $\hat{\alpha}_j^i \leq 1$. 
+The embeddings $h^i$ are computed as in any linear layer by means of the affine transformation:
+\begin{equation} \label{eq:forward}
+    h^i = W^i \tilde{c}^i + b^i.
+\end{equation}
+Whenever $\tilde{\alpha}_j^i \rightarrow 0$, the input $\tilde{c}_j^i \rightarrow 0$.
+%In the limit, as $\hat{\alpha}_j^i \rightarrow 0$, the input $\tilde{c}_j \rightarrow 0$. 
+This means that the corresponding concept tends to be dropped out and the network $f^i$ will learn to predict the $i$-th class without 
+relying on % using 
+the $j$-th concept. 
+
+In order to % To 
+get logic explanations, the proposed linear layer generates the truth table $\mathcal{T}^i$ formally representing the behaviour of the neural network 
+in terms of Boolean-like representations of the input concepts. % for each category employed as classification objective. 
+In detail, we indicate with $\bar{c}$ the Boolean interpretation of the input tuple $c \in C$, while $\mu^i \in \{0,1\}^k$ is the binary mask associated to $\tilde{\alpha}^i$.
+To encode the inductive human bias towards simple explanations \citep{miller1956magical,cowan2001magical,ma2014changing}, the 
+mask % vector
+% $\mu^i \in [0,1]^k$ 
+$\mu^i$
+% is computed and 
+is used to generate the 
+binary % one-hot 
+concept tuple $\hat{c}^i$, 
+dropping % masking 
+the least relevant concepts out of $c$,
+\begin{equation}\label{eq:sparse}
+    \hat{c}^i = \xi(\bar{c}, \mu^i)  \quad \text{with} \quad
+    \mu^i = \mathbb{I}_{\tilde{\alpha}^i \geq \epsilon} \quad \text{and} \quad \bar{c} = \mathbb{I}_{c \geq \epsilon},
+\end{equation}
+where $\mathbb{I}_{z \geq \epsilon}$ denotes the indicator function that is $1$ for all the components of vector $z$ being $\geq \epsilon$ and $0$ otherwise (considering the unbiased case, we set $\epsilon=0.5$).
+The function $\xi$ returns the vector with the components of $\bar{c}$ that correspond to $1$'s in $\mu^i$ (i.e. it sub-selects the data in $\bar{c}$).
+%while $\xi$ sub-selects the concepts for which $\mu^i_j=1$.
+As a results, $\hat{c}^i$ belongs to a space $\hat{C}^i$ of $m_i$ Boolean features, with $m_i < k$ due to the effects of the subselection procedure.
+%Given a dataset $\mathcal{D}=(\mathcal{C},\mathcal{Y})$, sparse concept representations $\hat{c}^i$ are obtained for each observation from Eq. \ref{eq:sparse} and stacked together in the sparse matrix $\hat{\mathcal{C}}^i$.
+%= [\hat{c}^i(1), ...., \hat{c}^i(m)]$. 
+%This matrix is concatenated with the Boolean\sm{-interpreted} model predictions $\bar{f}^i = \mathbb{I}_{f^i \geq 0.5}$ to obtain the matrix $\mathcal{T}^i$ corresponding to the sparse truth table used to generate logic explanations (see Sec. \ref{sec:fol}):
+
+The truth table $\mathcal{T}^i$ is a particular way of representing the behaviour of network $f^i$ based on the outcomes of
+ processing multiple input samples collected in a generic dataset $\mathcal{C}$.
+ As the truth table involves Boolean data, we denote with 
+$\hat{\mathcal{C}}^i$ the set with the Boolean-like representations of the samples in $\mathcal{C}$ computed by $\xi$, Eq.~\ref{eq:sparse}.
+We also introduce $\bar{f}^i(c)$ as the Boolean-like representation of the network output, $\bar{f}^i(c)=\mathbb{I}_{f^i(c)\geq \epsilon}$.
+%old
+% From an operational perspective, the contents $\mathbf{T}^i$ of the truth table $\mathcal{T}^i$ are obtained by stacking data of $\hat{\mathcal{C}}^i$ into a 2D matrix $\hat{\mathbf{C}}^i$ (row-wise), and concatenating the result with the column vector $\bar{\mathbf{f}}^i$ whose elements are $\bar{f}^i(c)$, $c\in \mathcal{C}$, that we summarize as
+% \begin{equation} \label{eq:truth-table}
+%     \mathbf{T}^i = \Big( \hat{\mathbf{C}}^i \ \Big|\Big| \ \bar{\mathbf{f}}^i \Big).
+% \end{equation}
+The truth table $\mathcal{T}^i$ is obtained by stacking data of $\hat{\mathcal{C}}^i$ into a 2D matrix $\hat{\mathbf{C}}^i$ (row-wise), and concatenating the result with the column vector $\bar{\mathbf{f}}^i$ whose elements are $\bar{f}^i(c)$, $c\in \mathcal{C}$, that we summarize as
+\begin{equation} \label{eq:truth-table}
+    \mathcal{T}^i = \Big( \hat{\mathbf{C}}^i \ \Big|\Big| \ \bar{\mathbf{f}}^i \Big).
+\end{equation}
+To be precise, any $\mathcal{T}^i$ is more like an empirical truth table than a classic one corresponding to an $n$-ary boolean function, indeed $\mathcal{T}^i$ can have repeated rows and missing Boolean tuple entries. However, $\mathcal{T}^i$ can be used to generate logic explanations in the same way, as we will explain in Sec. \ref{sec:fol}.
+% The purpose of the probability distribution $\alpha$ is threefold: (i) it models the relative importance of concepts enabling the inspection of the most relevant ones for each classification task; (ii) it 
+% \begin{equation}
+%     \hat{\alpha}^i = \frac{\alpha^i}{\max \alpha^i}
+% \end{equation}
+% At training epoch $t$, therefore, the weighted concepts $\tilde{C}^i$ will be the input of the neural network $\hat{y}^i = f^i \big( \tilde{C}^i \big)$. 
+% \fg{Ma il concept awareness non fa già parte della f?}
+% Concept awareness scores close to zero will drop out the least relevant input concepts allowing for simpler logic-based explanations of the neural network's decisions, as explained in Sec. \ref{sec:fol}. 
+% More precisely, only input concepts which satisfy the following condition are considered:
+% \begin{equation}
+%     E_i =  \left\{\langle c_j \rangle  \mid \frac{\alpha^i_j}{\max_j{\alpha^i}} \textgreater 0.5 \right\}, 
+% \end{equation}
+% where $E_i$ denotes the set of input concepts employed to explain the output $f_i$.
+% \subsubsection{Multi-task awareness}
+
+
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=0.6\textwidth]{figs/logic_layers.pdf}
+%     \caption{Multi-Head awareness consists of several awareness layers running in parallel. GC: CAMBIARE NOME DEL LAYER NELLA FIGURA.}
+%     \label{fig:multi_head}
+% \end{figure}
+
+% \subsubsection{Multi-Head awareness}
+
+
+\subsection{Loss Function}
+The entropy of the probability distribution $\alpha^i$ (Eq. \ref{eq:alpha}),
+\begin{equation}
+    \mathcal{H}(\alpha^i) = - \sum_{j=1}^k \alpha^i_j \log \alpha^i_j
+    \label{eq:ent}
+\end{equation}
+is minimized when a single $\alpha^i_j$ is one, thus representing the extreme case in which only one concept matters, while it is maximum when all concepts are equally important. When $\mathcal{H}$ is jointly minimized with the usual loss function for supervised learning $L(f,y)$ (being $y$ the target labels--we used the cross-entropy in our experiments), it allows the model to find a trade off between fitting quality and a parsimonious activation of the concepts, 
+allowing each network $f^i$ to predict $i$-th class memberships using few relevant concepts only.
+%The minimum of this function corresponds to a one-hot encoded configuration of $\alpha$. When $\alpha_j^i=0$ the $j$-th concept is not taken into consideration when predicting the $i$-th class, as described in Eq. \ref{eq:drop}.
+%A cross entropy loss $L(f,y)$ is also employed on the available labels $y$ for standard supervised training.
+%\sm{We define with $L(f,y)$ the cross-entropy loss for supervised data, being $y$ the target labels}.
+Overall, the loss function to train the network $f$ is defined as,
+% The overall loss function to train network $f$ is defined by summing Eq. \ref{eq:ent} with the cross entropy loss $L$ on the available labels $y$ for $f$ used for standard supervised training:
+\begin{equation}
+    \mathcal{L}(f,y,\alpha_1,\ldots,\alpha_r) = L(f,y) + \lambda \sum_{i=1}^r\mathcal{H}(\alpha^i),
+    \label{eq:loss}
+\end{equation}
+where $\lambda > 0$ is the hyperparameter used to balance the relative importance of low-entropy solutions in the loss function. Higher values of $\lambda$ lead to sparser configuration of $\alpha$, constraining the network to focus on a smaller set of concepts for each classification task (and vice versa), thus encoding the inductive human bias towards simple explanations \citep{miller1956magical,cowan2001magical,ma2014changing}. For further details on the impact of $\lambda$ on the model predictions and explanations (see Appendix).
+It may be pointed out that a similar regularization effect could be achieved by simply minimizing the $L_1$ norm over $\gamma^i$. However, as we observed in the Appendix, the $L_1$ loss does not sufficiently penalize the concept scores for those features which are uncorrelated with the predicted category. The Entropy loss, instead, correctly shrink to zero concept scores associated to uncorrelated features while the other remains close to one.
+
+\section{Experiments and Results}
+
+Experiments show how entropy-based networks outperform state-of-the-art white box models such as BRL and decision trees
+% \footnote{The height of the tree is limited to obtain rules of comparable lengths. See Appendix \ref{appendix:exp_details}.} 
+and interpretable neural models such as $\psi$ networks on challenging classification tasks (Table \ref{tab:model-accuracy}). 
+Moreover, the entropy-based regularization and the adoption of a concept-based neural network have minor affects on the classification accuracy of the explainer when compared to
+% the proposed architecture matches (and sometimes surpasses) the classification accuracy provided 
+a standard black box neural network
+% \footnote{%\pb{This is a neural network having the same architecture and hyperparameters of the entropy-based network, with the only exception of the weight hyperparameter $\lambda$ in the loss function (see Eq. \ref{eq:loss}) which is set to $\lambda=0$. This setting makes the network free from any constraint related to explainability.}
+% In the case of MIMIC-II and V-Dem, this is a standard neural network with the same hyperparameters of the entropy-based one, but with a linear layer as first layer. In the case of MNIST and CUB, it is the $g$ model directly predicting the final classes $g:X\rightarrow Y$.}
+directly working on the input data, and a Random Forest model applied on the concepts.% as shown in Table \ref{tab:model-accuracy}.}
+At the same time, the logic explanations provided by entropy-based networks are better than $\psi$ networks and almost as accurate as the rules found by decision trees and BRL, while being far more concise, as demonstrated in Fig.~\ref{fig:multi-objective}. 
+More precisely, logic explanations generated by the proposed approach represent non-dominated solutions \citep{marler2004survey} \textit{quantitatively} measured in terms of complexity and classification error of the explanation. %(i.e. $100$ minus the classification accuracy of the explanation).
+Furthermore, the time required to train entropy-based networks is only slightly higher with respect to Decision Trees but is lower than $\psi$ Networks and BRL by one to three orders of magnitude (Fig. \ref{fig:time}), making it feasible for explaining also complex tasks. 
+% In addition, we observe how the proposed approach consistently outperform $\psi$ networks across all the main metrics (i.e. classification accuracy, explanation accuracy, and fidelity). 
+The fidelity (Table~\ref{tab:fidelity})
+% \footnote{We did not compute the fidelity of decision trees and BRL as they are trivially rule-based models.} 
+of the formulas extracted by the entropy-based network is always higher than $90\%$ with the only exception of MIMIC. This means that almost any prediction made using the logic explanation matches the corresponding prediction made by the model, making the proposed approach very close to a white box model.
+%The combination of 
+These results empirically shows that our method represents a viable solution for a safe %the lawful 
+deployment of \textit{explainable} cutting-edge models.
+% The complexity of decision tree formulas is never below 100 terms, making them useless as explanations.
+% In terms of fidelity the proposed approach closed the gap from white-box models like decision trees and BRL, whose fidelity is always 100\% \textit{by design}.
+
+
+
+\begin{table}[t]
+\small
+\centering
+% \vspace{-3mm}
+%\parbox{.49\linewidth}{
+\begin{tabular}{lll}
+\toprule
+{} &         Entropy net  &        $\psi$ net \\
+\midrule
+\textbf{MIMIC-II     } &  ${\bf 79.11  \pm 2.02}$ &   $51.63 \pm 6.67$ \\
+\textbf{V-Dem         }&  ${\bf 90.90 \pm 1.23}$ &  $69.67 \pm 10.43$ \\
+\textbf{MNIST}         &  ${\bf 99.63 \pm 0.00}$ & $65.68 \pm 5.05$ \\
+\textbf{CUB         }  &  ${\bf 99.86 \pm 0.01}$ &  $77.34 \pm 0.52$ \\
+\bottomrule
+\end{tabular}
+\caption{Out-of-distribution fidelity (\%)}
+\label{tab:fidelity}
+% \vspace{-1mm}
+\end{table}
+
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=0.49\columnwidth]{figs/MIMIC-II_pareto.pdf}
+%     \includegraphics[width=0.49\columnwidth]{figs/V-Dem_pareto.pdf}\\
+%     \includegraphics[width=0.49\columnwidth]{figs/MNIST_pareto.pdf}
+%     \includegraphics[width=0.49\columnwidth]{figs/CUB_pareto.pdf}
+%     % \vskip -2mm    
+%     \includegraphics[width=\columnwidth]{figs/legend.pdf}\\
+%     \caption{Non-dominated solutions  \citep{marler2004survey} (dotted black line) in terms of average explanation complexity and average explanation test error. The vertical dotted red line marks the maximum explanation complexity laypeople can handle (i.e. complexity $\approx 9$, see  \citep{miller1956magical,cowan2001magical,ma2014changing}). Notice how the explanations provided by the Entropy-based Network are always one of the non-dominated solution.
+%     % When humans compare a set of hypotheses outlining the same outcomes, they tend to have an implicit bias towards the simplest ones, making explanations from entropy-based networks the best choice.
+%     }
+%     % \vskip -1mm
+%     \label{fig:multi-objective}
+% \end{figure}
+\begin{table}[t]
+\small
+\centering
+% \vspace{-3mm}
+\begin{tabular}{lllll}
+\toprule
+{} & Entropy net     &              Tree &               BRL &        $\psi$ net\\
+\midrule
+\textbf{MIMIC-II     } &  $28.75$ &    ${\bf 40.49}$ &   $30.48$ &    $     27.62$ \\
+\textbf{V-Dem         }&  $46.25$ &    $72.00$ &   ${\bf 73.33}$ &    $     38.00$ \\
+\textbf{MNIST}         &  ${\bf 100.00}$ &   $41.67$ &  ${\bf 100.00}$ &    $96.00$ \\
+\textbf{CUB         }  &  $35.52$ &    $21.47$ &   ${\bf 42.86}$ &    $41.43$ \\
+\bottomrule
+\end{tabular}
+\caption{Consistency (\%)}
+\label{tab:consistency}
+% \vspace{-2mm}
+\end{table}
+
+
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=.99\columnwidth]{LaTeX/figs/elapsed_time_plot_elens.pdf}
+%     \caption{Time required to train models and to extract the explanations. Our model compares favorably with the competitors, with the exception of Decision Trees. BRL is by one to three order of magnitude slower than our approach.}
+%     % Error bars show the 95\% confidence interval of the mean.
+%     \label{fig:time}
+%     % \vskip -1mm
+% \end{figure}
+
+
+The reason why the proposed approach consistently outperform $\psi$ networks across all the key metrics (i.e. classification accuracy, explanation accuracy, and fidelity) can be explained observing how entropy-based networks are far less constrained than $\psi$ networks, both in the architecture (our approach does not apply weight pruning) and in the loss function (our approach applies a regularization on the distributions $\alpha^i$ and not on all weight matrices). Likewise, the main reason why the proposed approach provides a higher classification accuracy with respect to BRL and decision trees may lie in the smoothness of the decision functions of neural networks which tend to generalize better than rule-based methods, as already observed by Tavares et al. \citep{tavares2020understanding}.
+For each dataset, we report in the Appendix a few examples of logic explanations extracted by each method, as well as in Fig. \ref{fig:experiments}. We mention that the proposed approach is the only matching the %logically correct 
+ground-truth explanation for the MNIST even/odd experiment, i.e. $\forall x, \mathrm{isOdd(x)} \leftrightarrow \mathrm{isOne(x)} \oplus \mathrm{isThree(x)} \oplus \mathrm{isFive(x)} \oplus \mathrm{isSeven(x)} \oplus \mathrm{isNine(x)}$ and $\forall x, \mathrm{isEven(x)} \leftrightarrow \mathrm{isZero(x)} \oplus \mathrm{isTwo(x)} \oplus \mathrm{isfour(x)} \oplus \mathrm{isSix(x)} \oplus \mathrm{isEight(x)}$, being $\oplus$ the exclusive OR.
+In terms of formula consistency, we observe how 
+BRL is the most consistent rule extractor, closely followed by the proposed approach (Table \ref{tab:consistency}).
+
+\section{Impact and Significance}
+Summary of contributions: a sparse attention mechanism for concept bottlenecks.
+
+Summary of results: a scalable, self-explaining neural approach providing first-order logic explanations for its predictions. The new approach is almost as accurate as black box models (e.g., an equivalent neural model with same number of parameters/layers, random forest). The explanations provided by the new approach are: (i) much more concise than those provided by existing white box rule learners (e.g., decision trees and bayesian rule lists), (ii) as accurate as the ones provided by existing white boxes. It's a way to rigorously assess whether concept-based models learn as intended by checking how they arrived to a prediction.
+- the concept-based and the XAI field as novel self-explaining approach which may encourage further advances in concept learning
+
+- other research disciplines as the extraction of FOL rules can be useful to answer research questions in a human interpretable way
+
+- production/society as self-explaining models might become a legal requirement
+
+
+Impact/significance: self-explaining models may soon become a legal requirement in Europe for the ethical deployment of AI models. So, this work has an impact on:
+
+- the concept-based and the XAI field as novel self-explaining approach which may encourage further advances in concept learning
+
+- other research disciplines as the extraction of FOL rules can be useful to answer research questions in a human interpretable way
+
+- production/society as self-explaining models might become a legal requirement
+
+
+\section{The Accuracy-vs-Interpretability Trade-Off}
+Next steps: the proposed approach provides a good compromise between accuracy and explainability and it's Pareto optimal compared to black and white-boxes but it does not outperforms existing approaches on BOTH explainability and accuracy. How can we solve this trade-off?
+
+
+
+\section*{Papers}
+\nobibliography*
+\begin{itemize}
+    \item \bibentry{ciravegna2021logic}
+    \item \bibentry{barbiero2021entropy}
+    \item \bibentry{jain2022extending}
+    \item Federico Siciliano, Pietro Barbiero, ..., Pietro Lio'. Explaining Neural Networks Using a Ruleset Based on Interpretable Concepts. \textit{arXiv preprint arXiv:XXXX.YYYYY},2023
+\end{itemize}
+
 
 
 

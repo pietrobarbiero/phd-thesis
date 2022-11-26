@@ -563,27 +563,51 @@ To tractably compute CAS in practice, we sum homogeneity scores by varying $p$ a
 
 \textit{In this chapter I will illustrate how concepts can be used to train interpretable models outperforming their non-interpretable equivalents in terms of raw task performance. In particular, I will focus on my contributions in inventing Concept Embedding Models (CEMs)~\citep{zarlenga2022concept} which are now the state of the art of supervised concept-based models. I will describe CEMs architectures and learning paradigms. I will also discuss how CEMs support effective human interactions through learnt concepts highlighting how these interactions can increase both model performances and human trust in the model~\citep{shen2022trust}. I will conclude the chapter demonstrating how CEMs outperform equivalent non-interpretable architectures and state-of-the-art concept-based models on synthetic and real-world datasets.}
 
-Summary to this point: so now we know how to train self-explaining models providing global and quantitative explanations for their predictions. However, we lost a bit of accuracy. In this chapter I will show how to design a self-explaining models without sacrificing accuracy (and vice versa).
+\paragraph{Motivation: knowledge gaps in Concept Bottleneck Models---}
+In the previous chapter we discussed metrics to evaluate and compare different concept-based models we introduced in Chapter~\ref{chapter:background}. In particular we used these metrics to identify the main weaknesses of state-of-the-art concept-based models. In this chapter we are going to focus on one of the main weaknesses we identified in Concept Bottleneck Models (CBMs): the accuracy VS explainability trade off. Recalling from the previous chapter, this kind of issue is one of the key concerns in state-of-the-art explainable-by-design models as they often struggle to provide a good compromise between the accuracy of their predictions and the quality of their explanations. As outlined in Figure~\ref{fig:cbm_tradeoff}, state-of-the-art CBMs do not escape this doom as they either provide high task performance (accuracy) or high concept alignment (interpretability) when solving challenging problems.
+\begin{figure}[h]
+\includegraphics[width=\textwidth]{}
+\caption{Accuracy VS explainability trade off in Concept Bottleneck Models (CBMs). Traditional CBMs struggle to find a good compromise between task accuracy and explainability. The red star at the top right marks the optimal compromise.}
+\label{fig:cbm_tradeoff}
+\end{figure}
+On top of this issue, CBMs also struggle in real-world conditions where concept supervisions are scarce and noisy. In these scenarios, these models struggle in reaching high task accuracy as the set of concepts might not hold enough information to solve the task (see Figure~\ref{fig:cbm_real_world}. This problem is known as ``concept incompleteness'' and might heavily affect the deployment standard CBMs.
+\begin{figure}[h]
+\includegraphics[width=\textwidth]{}
+\caption{Real-world conditions (e.g., concept incompleteness and noisy supervisions) impair Concept Bottleneck Models (CBMs) task accuracy. As concept supervisions available for training are reduced, the task accuracy drops dramatically.}
+\label{fig:cbm_real_world}
+\end{figure}
+To overcome this limitation, \citet{mahinpei2021promises} proposed to augment the learning capacity of CBMs by introducing extra neurons at concept level whithout imposing any direct concept supervision on their activations. This solution (a.k.a. ``hybrid CBMs'') allows the model to efficiently solve tasks even in noisy and concept-incomplete settings. However, this performance improvement comes with a cost: test-time concept interventions become ineffective (see Figure~\ref{fig:hybrid_interventions}. This suggests that hybrid CBMs are prone to the phenomenon of known as ``shortcut learning'': task performance is independent from concept activations as it relies mostly on the unsupervised extra neurons. This result demonstrates that hybrid CBMs cannot provide reliable concept-based explanations for task predictions nor they can effectively interact with human experts through the learnt concepts.
+\begin{figure}[h]
+\includegraphics[width=\textwidth]{}
+\caption{Concept interventions are ineffective in hybrid CBMs.}
+\label{fig:hybrid_interventions}
+\end{figure}
 
-\section{Motivation}
-Knowledge gap/motivation: concept bottleneck models are powerful and engender human trust because they provide concept-based explanations (awhich are aligned with human catergories + interventions demonstreate the "causal" dependency of the predictions on concepts. However, vanilla CBMs (such as standard E-LENs) come with a cost: they increase interpretability (and trust) but undermine model performance. For this reason, hybrid CBMs~\citep{mahinpei2021promises} were invented trying to get the lost performance back by providing a set of extra unsupervised neurons in the concept bottleneck. This way the concept bottleneck has more "freend logic-based as we have seen in the previous chapter) + humans can interact with the model at concept level at test time by fixing learnt concepts and improving models' performances. These increase human trust as: explanations are based on terms dom" and learning capacity which can be used to increase performance. However (2), this approach impairs interpretability and trust as it weakens the structural dependency of tasks from concepts. In fact, concept interventions are not effective on hybrid CBMs! This means that the model was able to learn both tasks and concepts, but the model does not use the concepts to learn the tasks, but rather the information encoded in the extra unsupervised neurons. This way the whole point of concept bottleneck models is lost. Again, it seems like there is a trade-off between accuracy (hybrid CBMs and vanilla end-to-end black-box) and interpretability (vanilla CBMs). Can e design a model which represents the best of the two worlds? Can we gain accuracy in CBMs without sacrificing interpretability?
+\paragraph{Solution: Concept Embedding Models---}
+To fill these knowledge gaps, in this chapter we will present Concept Embedding Models (CEMs,~\citep{zarlenga2022concept}), a novel class of CBMs aiming at:
+\begin{itemize}
+	\item breaking the accuracy VS explainability trade off in CBMs;
+	\item scaling CBMs to real-world conditions where concept supervisions are scarce and noisy;
+	\item supporting effective and simple human interventions through the learnt concepts.
+\end{itemize}
+The \textbf{key innovation} of CEMs is a fully supervised high-dimensional concept representation. This high-dimensional representation increases the capacity of CEMs at concept level. The increased model capacity allows to encode more information in each concept beyond the probability of a concept being active/inactive, including contextual nuances which CEMs can use to have a deeper understanding of each concept and to solve tasks more efficiently.
+
+We will first present CEM's architecture~\ref{sec:cem} and then we will demonstrate how CEMs fill the key CBMs knowledge gaps we discussed with a set of experiments of increasing complexity~\ref{sec:cem}.
+
+%\paragraph{Research questions---}
+%To evaluate these models and compared them to the current SOTA we use:
+%
+%- performance: model accuracy
+%
+%- interpretability/trust: concept alignment score, logic explanation accuracy/complexity, test-time concept interventions
 
 
-Contribution: a concept bottleneck model breaking the information bottleneck at concept-level and going beyond the current accuracy-vs-explainability trade-off.
+%
+%Research questions: how would this approach compare with existing approaches? is it interpretable as white boxes in terms of rule complexity? is it accurate as black boxes? what's the accuracy-vs-explainability trade-off of the approach? is there any advantage of using this approach over existing methods?
+%
+%\section{The Information Bottleneck in Concept Learning}
 
-Key innovation: a high-dimensional representation to learn concepts in the bottleneck.
-
-Expected outcome: the high-dimensional representation increases the capacity of the concept bottleneck models at concept level. The increased model capacity allows to encode more information in each concept not just active/inactive, but nuances representing different aspects of the same concepts enriching the concept semantics with subsymbolic information. This can be useful for explainability as it allows to find relevant subclusters which may represent sub-concepts. However, in this approach ALL neurons are supervised in the bottleneck, thus the prediction still depend on concepts being active/inactive. For this reason, concept interventions are applied as in vanilla CBMs. To evaluate these models and compared them to the current SOTA we use:
-
-- performance: model accuracy
-
-- interpretability/trust: concept alignment score, logic explanation accuracy/complexity, test-time concept interventions
-
-Research questions: how would this approach compare with existing approaches? is it interpretable as white boxes in terms of rule complexity? is it accurate as black boxes? what's the accuracy-vs-explainability trade-off of the approach? is there any advantage of using this approach over existing methods?
-
-\section{The Information Bottleneck in Concept Learning}
-
-\section{Concept Embedding Models}
+\section{Concept Embedding Models} \label{sec:cem}
 For each concept, MixCEM learns a mixture of two embeddings with explicit semantics representing the concept's activity. Such design allows our model to construct evidence both in favour of and against a concept being active, and supports simple concept interventions as one can switch between the two embedding states at intervention time.
 %
 % \begin{figure}[t]

@@ -1,0 +1,61 @@
+
+\chapter*{Timetable}
+\textit{A timetable that schedules the remaining work and indicates when the draft and final versions of the thesis will be produced.}
+
+
+\section*{Objectives}
+My research objectives for rest of my Ph.D. are:
+\begin{itemize}
+    \item Extend the differentiable concept discovery technique to all neural architectures.
+    \item Limit shortcut learning in concept-based models.
+    \item Write the thesis.
+\end{itemize}
+
+
+\section*{Timeline}
+
+\paragraph{Summer 2022 (July-September)}
+\begin{itemize}
+    \item Work on NeurIPS reviews.
+    \item Extend differentiable concept discovery to CNNs and KGEs.
+	\item Experiment different solutions to limit shortcut learning.
+\end{itemize}
+\textbf{Milestone(s): preliminary results on CNNs and KGEs.}
+
+\paragraph{Michaelmas 2022 (October-December)}
+\begin{itemize}
+	\item Extend differentiable concept discovery to transformers.
+	\item Fine-tune shortcut learning solutions.
+	\item Draft the thesis.
+\end{itemize}
+\textbf{Milestone(s): preliminary results on transformers.}
+
+\paragraph{Lent 2023 (January-March)}
+\begin{itemize}
+    \item Ask feedback on thesis draft.
+    \item Extend the experiments on concept discovery and shortcut learning to real-world scenarios.
+\end{itemize}
+\textbf{Milestone(s): real-world tests.}
+
+\paragraph{Easter 2023 (April-June)}
+\begin{itemize}
+    \item Refine implementations.
+    \item Write up and submit manuscript(s) to appropriate venue.
+\end{itemize}
+\textbf{Milestone(s): submit manuscript(s).}
+
+\paragraph{Summer 2023 (July-September)}
+\begin{itemize}
+    \item Improve thesis.
+    \item Work on the reviews of submitted manuscript(s).
+\end{itemize}
+\textbf{Milestone(s): submit thesis final version.}
+
+
+\textit{A report on progress made in relation to that described in the first-year PhD Proposal. This should include an indication of where the student is relative to their original timetable, discussion of any significant changes to the original ideas and their implications for the research as a whole.}
+
+In my first Ph.D. year I analyzed the explainable AI (XAI) literature looking for the main knowledge gaps. According to my analysis state-of-the-art XAI methods: (i) were limited to local (instance-based) explanations, (ii) provided brittle and qualitative explanations, or (iii) needed to sacrifice prediction performances on challenging tasks. During the first year of Ph.D. I addressed these knowledge gaps improving state-of-the-art concept-based models~\citep{ghorbani2019towards,kim2018interpretability}. In particular, I contibuted to the invention of Logic Explained Networks (LENs)~\citep{ciravegna2021logic,barbiero2021entropy}, explainable-by-design concept-based architectures providing robust first-order logic logic explanations for their predictions. In my first-year Ph.D. Proposal I also suggested a few preliminary research directions to extend and improve explainable-by-design concept-based architectures.
+
+In my second year of Ph.D. I further analyzed the main gaps of explainable-by-design concept-based architectures preventing their deployment on a large scale, following the suggestions and feedback I received for my first-year viva. I identified three main issues: (i) explainable-by-design architectures did not provide any advantage over their black-box equivalents in terms of raw prediction performance, (ii) existing metrics to evaluate the quality of concept representations were unefficient or based on unrealistic assumptions, and (iii) robust concept-based models required expensive concept annotations for training. During my second year I addressed these knowledge gaps by: (i) contributing to the invention of Concept Embedding Models~\citep{zarlenga2022concept}, explainable-by-design architectures outperforming their black-box equivalents in terms of raw prediction accuracy, (ii) proposing two novel metrics~\citep{zarlenga2021quality,zarlenga2022concept} generalizing and relaxing the assumptions of existing scores measuring the quality of concept representations, and (iii) devising a concept encoding strategy to make graph neural networks aware of concepts they discover in an unsupervised way~\citep{magister2022encoding}.
+
+In summary, in my first two years of Ph.D. I demonstrated how the explainable-by-design architectures I contributed to provide robust trust certificates to their users~\citep{shen2022trust}. More specifically the invented models consistently outperform exiting black-box models in terms of raw prediction performance as well as in terms of quality and stability of their explanations. My plan for the last year of Ph.D. is to extend the unsupervised concept encoding strategy to embrace all the most common architectures. This will allow cutting the expenses for the adoption of concept-based models in different domains. Finally, I will conclude my thesis demonstrating the applicability of  the proposed concept-based models in high-stakes scenarios such as modeling medical digital twins.

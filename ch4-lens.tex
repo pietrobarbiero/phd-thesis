@@ -1,0 +1,360 @@
+\chapter{Concept-based Logic Explanations} 
+\label{chapter:lens}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+\textit{In this chapter I will explain how concepts can be used to train more interpretable models. In particular, I will focus on my contributions in inventing Logic Explained Networks (LENs)~\citep{ciravegna2021logic}, a family of concept-based models providing first-order logic explanations for their predictions. I will describe LENs main architectures, learning paradigms, and logic rule extraction algorithms~\citep{barbiero2021entropy}. I will conclude the chapter showcasing LENs on a set of synthetic and real-world experiments demonstrating how LENs can provide highly accurate explanations with classification performances close to state-of-the-art models.}
+
+
+Summary to this point: to solve the problem of human trust in AI we need reliable models that can be accurate and provide explanations for their decisions, we want to know how! In this chapter I will explain how to design self-explaining models providing global and quantitative explanations for their predictions.
+
+\section{Motivation}
+
+Knowledge gap/Motivation: current solutions provide post-hoc, local, and qualitative explanations. Post-hoc is bad because the damage is done: whatever biases the model learnt during training can be identified but not changed. Local is bad because local explanations are brittle: explain a cherry-picked example or an outlier does not generalize. Qualitative is bad because it's not clear how general are explanations: would they hold on unseen samples? for how many samples would they hold? how to compare XAI models? Hence we want: self-explainable models providing global and quantitative explanations. Concept bottleneck models tried to solve the post-hoc problem architecturally/by design: they propose an architecture where models' predictions are conditioned on concepts. This way: predictions can be explained in terms of concepts being active/inactive. However, explanations are still qualitative e.g., this concept is important, this one is less important. Is it possible to formalize the explanation in a way that is not ambiguous and shows how the model used the concepts? Also, explanations are still local: for this sample this concept A is active, concept B is inactive, etc. How to provide global explanations?
+
+Contribution: a self-explainable model providing global and quantitative explanations.
+
+Key innovation: a sparse attention mechanism for concept bottleneck models.
+
+Expected outcome: The sparse attention allows the model to learn how to cherry-pick the most relevant concepts for each task and use only them for solving the task. This way the model learns how to solve the task using only a few concepts which can be active/inactive. This allows the extraction of logic explanations as the model is learning a logic mapping from (fuzzy) concepts to (classification) tasks.The logic explanations are simple thanks to the sparse attention mechanism. Without the attention mechanism the extraction of logic rules won't scale as the truth tables may explode (their size grows as exponentially with the number of concepts). Logic explanations can also be evaluated with quantitative metrics in terms of performance/interpretability: 
+
+- performance: prediction accuracy (using the logic formulae to predict unseen samples)
+
+- interpretability: complexity (the number of terms in a logic formula)
+
+Research questions: how would this approach compare with existing approaches? is it interpretable as white boxes in terms of rule complexity? is it accurate as black boxes? what's the accuracy-vs-explainability trade-off of the approach? is there any advantage of using this approach over existing methods?
+
+
+\section{Logic Explained Networks}
+
+\subsection{Generate Concept-based Logic Explanations}
+Any Boolean function can be converted into a logic formula in Disjunctive Normal Form (DNF) by means of its truth-table \citep{mendelson2009introduction}. 
+% We indicate with $\hat{f}^i$ the Boolean function represented by the truth table $\mathcal{T}^i$, $\hat{f}^i: \hat{C}^i \mapsto Y^i$, being $Y^i$ the $i$-th component of $Y$.
+%\sm{Following the notation defined at the end of Sec.~\ref{sec:con_awa}}, any $\bar{f}^i$ is a Boolean function over the set $\hat{C}^i$. %We denote with $\varphi_i$ the logic formula corresponding to the truth-table $\mathcal{T}^i$ of $\bar{f}^i$. 
+Converting a truth table into a DNF formula provides an effective mechanism to extract logic rules of increasing complexity from individual observations
+% , for cluster of samples,
+to a whole class of samples. 
+% In order to expliciteply write down the syntactic logic formula corresponding to any boolean function, we will use text strings in quotation marks corresponding to both concept and task symbols.
+% The following steps are repeated for any task function $f^i$.
+% [TODO] In the following, with a little abuse of notation, we will denote by $\bar{c}_j,\neg\bar{c}_j$ and $\bar{f}^i,\neg\bar{f}^i$ both the Boolean values and the human-understandable concept and task name and their negated, respectively, for every $j,i$. 
+The following rule extraction mechanism is applied to any empirical truth table $\mathcal{T}^i$ for each task $i$.
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=1\textwidth]{figs/truth-table.png}
+%     \caption{Caption}
+%     \label{fig:tt2form}
+% \end{figure}
+
+% %\vspace{-3mm}
+\paragraph{FOL extraction.}
+Each row of the truth table $\mathcal{T}^i$ can be partitioned into two parts that are a tuple of binary concept activations, $\hat{q}\in \hat{C}^i$, and the outcome of $\bar{f}^i(\hat{q}) \in \{0, 1\}$. 
+An \textit{example-level} logic formula, consisting in a single minterm, can be trivially extracted from each row for which $\bar{f}^i(\hat{q})=1$, by simply connecting with the logic AND ($\wedge$) the true concepts and negated instances of the false ones. 
+The logic formula becomes human understandable whenever concepts appearing in such a formula are replaced with human-interpretable strings that represent their name (similar consideration holds for $\bar{f}^i$, in what follows). For example, the following logic formula $\varphi^i_t$,
+\begin{equation}
+    \varphi^i_{t} = \textbf{c}_1\wedge\ \neg \textbf{c}_2 \wedge \ldots\wedge\textbf{c}_{m_i},
+    \label{eq:locexp}
+\end{equation}
+is the formula extracted from the $t$-th row of the table where, in the considered example, only the second concept is false, being $\textbf{c}_z$ the name of the $z$-th concept.
+Example-level formulas can be aggregated with the logic OR ($\vee$) to provide a \textit{class-level} formula, 
+\begin{equation}
+    \displaystyle\bigvee_{t \in S_i}\varphi^i_t, %= \displaystyle\bigvee_{\hat{c} \in S_i}\textbf{c}_1\wedge\ldots\wedge\textbf{c}_{m_i}
+\label{eq:agg_exp}
+\end{equation}
+being $S_i$ the set of rows
+ indices of $\mathcal{T}^i$ for which $\bar{f}^i(\hat{q}) = 1$, i.e. it is the support of $\bar{f}^i$.
+%Once $\varphi^i$ is built, given a concept tuple $\bar{c} \in \hat{C}^i$, we may measure the satisfiability of $\varphi^i$ on $\bar{c}$ by the truth-value of $\varphi^i(\bar{c})$ obtained by replacing boolean values with concept names in Eq. \ref{eq:agg_exp}. 
+%By construction the support of the class-level rule and of $\hat{f}^i$ coincide.
+We define with $\phi^i(\hat{c})$ the function that holds true whenever Eq.~\ref{eq:agg_exp}, evaluated on a given Boolean tuple $\hat{c}$, is true.
+Due to the aforementioned definition of support, we get the following class-level First-Order Logic (FOL) explanation for all the concept tuples,
+\begin{equation}
+\forall \hat{c} \in \hat{C}^i:\ \phi^i(\hat{c})\leftrightarrow\bar{f}^i(\hat{c}).
+\label{eq:FOL_C}
+\end{equation}
+We note that in case of non-concept-like input features, we may still derive the FOL formula through the ``concept decoder'' function $g$ (see Sec. \ref{sec:background}),
+\begin{equation}
+\forall x \in X:\ \phi^i\left(\xi(\overline{g(x)},\mu^i)\right)\leftrightarrow\bar{f}^i\left(\xi(\overline{g(x)},\mu^i)\right)
+\end{equation}
+An example of the above scheme for both example and class-level explanations is depicted on top-right of Fig. \ref{fig:awareness}.
+
+%\vspace{-3mm}
+\paragraph{Remarks.} The aggregation of many example-level explanations may increase the length and the complexity of the FOL formula being extracted for a whole class. However, existing techniques as the Quine–McCluskey algorithm can be used to get compact and simplified equivalent FOL expressions \citep{mccoll1878calculus,quine1952problem,mccluskey1956minimization}. For instance, the explanation (\textit{person} $\wedge$ \textit{nose}) $\vee$ ($\neg$\textit{person} $\wedge$ \textit{nose}) can be formally simplified in \textit{nose}.
+%\fg{mettere o omettere questo paragrafo?}
+%\paragraph{Remarks.}
+Moreover, the Boolean interpretation of concept tuples may generate colliding representations for different samples. For instance, the Boolean representation of the two samples $\{ (0.1, 0.7), (0.2, 0.9) \}$ is the tuple $\bar{c} = (0, 1)$ for both of them. This means that their example-level explanations match as well. %It is worth to notice that formally Eq. \ref{eq:FOL_C} relies on the fact that there are no two different concept tuples $c,d$ with $\bar{c}=\bar{d}$ such that $f^i(c)\neq f^i(d)$ for some $i$. 
+However, a concept can be eventually split into multiple finer grain concepts to avoid collisions. Finally, we mention that the number of samples for which any example-level formula holds (i.e. the support of the formula) is used as a measure of the explanation importance. In practice, example-level formulas are ranked by support and iteratively aggregated to extract class-level explanations, until the aggregation improves the accuracy of the explanation over a validation set.
+% For very large datasets, it may be useful to consider only the example-level formulas with the highest importance rate in order to drop outlier explanations out and to get simpler more focused explanations. 
+
+\subsection{The Entropy Layer}
+When humans compare a set of hypotheses outlining the same outcomes, they tend to have an implicit bias towards the simplest ones as outlined in philosophy \citep{soklakov2002occam,rathmanner2011philosophical},
+% aristotlePosterior, %hoffmann1996ockham,
+psychology \citep{miller1956magical,cowan2001magical}, and decision making \citep{simon1956rational,simon1957models,simon1979rational}.
+% , information theory \citep{mackay2003information}, and natural sciences \citep{wiley2011phylogenetics,ma2014changing}. 
+The proposed entropy-based approach encodes this inductive bias in an end-to-end differentiable model. The purpose of the entropy-based linear layer is to encourage the neural model to pick a limited subset of input concepts, allowing it to provide concise explanations of its predictions. The learnable parameters of the layer are the usual weight matrix $W$ and bias vector $b$. In the following, the forward pass is described by the operations going from Eq. \ref{eq:gamma} to Eq. \ref{eq:forward}
+while % and 
+the generation of the truth tables from which explanations are extracted 
+is formalized by % in 
+Eq. \ref{eq:sparse} and Eq. \ref{eq:truth-table}.
+
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=0.65\columnwidth]{LaTeX/figs/awareness_only_layer.pdf}
+%     \caption{A detailed view on one ``head'' of
+%     the entropy-based linear layer for the $1$-st class, emphasizing the role of the $k$-th input concept as example: (i) the scalar $\gamma_k^1$ (Eq.~\ref{eq:gamma}) is computed from the 
+%     set of weights connecting the $k$-th input concept 
+%     to the output neurons of the entropy-based layer;
+%     % $weight vector $W_k^1$, the weights associated to the $k$-th concept (Eq. \ref{eq:gamma}); 
+%     (ii) the relative importance of each concept is summarized by the categorical distribution $\alpha^1$ (Eq. \ref{eq:alpha}); (iii) rescaled relevance scores $\tilde{\alpha}^1$ drop irrelevant input concepts out (Eq. \ref{eq:drop}); (iv) hidden states $h^1$ (Eq. \ref{eq:forward}) and Boolean-like concepts $\hat{c}^1$ (Eq. \ref{eq:sparse}) are provided as outputs of the entropy-based layer.}
+%     \label{fig:awareness2}
+% \end{figure}
+
+The relevance of each input concept can be summarized in a first approximation by a measure that depends on the values of the weights connecting such concept to the upper network. In the case of network $f^i$ (i.e. predicting the $i$-th class) and of the $j$-th input concept, we indicate with $W_j^i$ the vector of weights departing from the $j$-th input (see Fig. \ref{fig:awareness2}), and we introduce
+%For the network $f^i$ (i.e. predicting the $i$-th class) the relevance of the $j$-th input concept is summarized in first approximation by the vector $W_j^i$ representing the weights connecting the $j$-th concept with the first layer of hidden neurons (see Fig \ref{fig:awareness}):
+\begin{equation} \label{eq:gamma}
+    \gamma^i_j = ||W^i_j||_1\ .
+\end{equation}
+The higher $\gamma^i_j$, the higher the relevance of the concept $j$ for the network $f^i$. In the limit case ($\gamma_j^i \rightarrow 0$) the model $f^i$ drops the $j$-th concept out.
+% Notice that since the vector $\gamma^i$ is computed for each class, hidden network layers are not shared among network outputs but are independent as shown in Fig \ref{fig:awareness}.
+To select only few relevant concepts for each target class, concepts are set up to compete against each other. To this aim, the relative importance of each concept to the $i$-th class is summarized in the categorical distribution 
+$\alpha^{i}$, composed of coefficients
+$\alpha^i_j \in [0,1]$ (with $\sum_j \alpha_j^i = 1$), modeled by the softmax function:
+\begin{equation} \label{eq:alpha}
+    \alpha^i_j = \frac{e^{\gamma^i_j/\tau}}{\sum_{l=1}^k e^{\gamma^i_l/\tau}}
+\end{equation}
+where $\tau \in \mathbb{R}^+$ is a user-defined temperature parameter to tune
+% the intrinsic tendency of 
+the softmax function. For a given set of $\gamma^i_j$, when using high temperature values ($\tau \rightarrow \infty$) all concepts have nearly the same relevance. For low temperatures values ($\tau \rightarrow 0$), the probability of the most relevant concept tends to $\alpha_j^i\approx 1$, while it becomes $\alpha_k^i\approx 0, \ k \neq j$, for all other concepts. For further details on the impact of $\tau$ on the model predictions and explanations (see Appendix).
+As the probability distribution $\alpha^i$ highlights the most relevant concepts, this information is directly fed back to the input, weighting concepts by the estimated importance. To avoid numerical cancellation due to values in $\alpha^i$ close to zero, especially when the input dimensionality is large,
+we replace $\alpha^i$ with its normalized instance $\tilde{\alpha}^i$, still  in $[0,1]^k$,
+and each input sample % represented by the concept tuple ù
+$c \in C$ is modulated by this %(normalized) 
+estimated importance, % weighted by the re-normalized vector $\hat{\alpha}^i \in [0,1]^k$:w
+\begin{equation} \label{eq:drop}
+    \tilde{c}^i = c \odot \tilde{\alpha}^i \qquad\qquad \text{with} \qquad \tilde{\alpha}_j^i = \frac{\alpha_j^i}{\max_u \alpha_u^i},
+\end{equation}
+where $\odot$ denotes the Hadamard (element-wise) product.
+The highest value in $\tilde{\alpha}^i$ is always $1$ (i.e. $\max_j \tilde{\alpha}_j^i = 1$) and it corresponds to the most relevant concept. 
+% All the other concepts are weighted by an $\hat{\alpha}_j^i \leq 1$. 
+The embeddings $h^i$ are computed as in any linear layer by means of the affine transformation:
+\begin{equation} \label{eq:forward}
+    h^i = W^i \tilde{c}^i + b^i.
+\end{equation}
+Whenever $\tilde{\alpha}_j^i \rightarrow 0$, the input $\tilde{c}_j^i \rightarrow 0$.
+%In the limit, as $\hat{\alpha}_j^i \rightarrow 0$, the input $\tilde{c}_j \rightarrow 0$. 
+This means that the corresponding concept tends to be dropped out and the network $f^i$ will learn to predict the $i$-th class without 
+relying on % using 
+the $j$-th concept. 
+
+In order to % To 
+get logic explanations, the proposed linear layer generates the truth table $\mathcal{T}^i$ formally representing the behaviour of the neural network 
+in terms of Boolean-like representations of the input concepts. % for each category employed as classification objective. 
+In detail, we indicate with $\bar{c}$ the Boolean interpretation of the input tuple $c \in C$, while $\mu^i \in \{0,1\}^k$ is the binary mask associated to $\tilde{\alpha}^i$.
+To encode the inductive human bias towards simple explanations \citep{miller1956magical,cowan2001magical,ma2014changing}, the 
+mask % vector
+% $\mu^i \in [0,1]^k$ 
+$\mu^i$
+% is computed and 
+is used to generate the 
+binary % one-hot 
+concept tuple $\hat{c}^i$, 
+dropping % masking 
+the least relevant concepts out of $c$,
+\begin{equation}\label{eq:sparse}
+    \hat{c}^i = \xi(\bar{c}, \mu^i)  \quad \text{with} \quad
+    \mu^i = \mathbb{I}_{\tilde{\alpha}^i \geq \epsilon} \quad \text{and} \quad \bar{c} = \mathbb{I}_{c \geq \epsilon},
+\end{equation}
+where $\mathbb{I}_{z \geq \epsilon}$ denotes the indicator function that is $1$ for all the components of vector $z$ being $\geq \epsilon$ and $0$ otherwise (considering the unbiased case, we set $\epsilon=0.5$).
+The function $\xi$ returns the vector with the components of $\bar{c}$ that correspond to $1$'s in $\mu^i$ (i.e. it sub-selects the data in $\bar{c}$).
+%while $\xi$ sub-selects the concepts for which $\mu^i_j=1$.
+As a results, $\hat{c}^i$ belongs to a space $\hat{C}^i$ of $m_i$ Boolean features, with $m_i < k$ due to the effects of the subselection procedure.
+%Given a dataset $\mathcal{D}=(\mathcal{C},\mathcal{Y})$, sparse concept representations $\hat{c}^i$ are obtained for each observation from Eq. \ref{eq:sparse} and stacked together in the sparse matrix $\hat{\mathcal{C}}^i$.
+%= [\hat{c}^i(1), ...., \hat{c}^i(m)]$. 
+%This matrix is concatenated with the Boolean\sm{-interpreted} model predictions $\bar{f}^i = \mathbb{I}_{f^i \geq 0.5}$ to obtain the matrix $\mathcal{T}^i$ corresponding to the sparse truth table used to generate logic explanations (see Sec. \ref{sec:fol}):
+
+The truth table $\mathcal{T}^i$ is a particular way of representing the behaviour of network $f^i$ based on the outcomes of
+ processing multiple input samples collected in a generic dataset $\mathcal{C}$.
+ As the truth table involves Boolean data, we denote with 
+$\hat{\mathcal{C}}^i$ the set with the Boolean-like representations of the samples in $\mathcal{C}$ computed by $\xi$, Eq.~\ref{eq:sparse}.
+We also introduce $\bar{f}^i(c)$ as the Boolean-like representation of the network output, $\bar{f}^i(c)=\mathbb{I}_{f^i(c)\geq \epsilon}$.
+%old
+% From an operational perspective, the contents $\mathbf{T}^i$ of the truth table $\mathcal{T}^i$ are obtained by stacking data of $\hat{\mathcal{C}}^i$ into a 2D matrix $\hat{\mathbf{C}}^i$ (row-wise), and concatenating the result with the column vector $\bar{\mathbf{f}}^i$ whose elements are $\bar{f}^i(c)$, $c\in \mathcal{C}$, that we summarize as
+% \begin{equation} \label{eq:truth-table}
+%     \mathbf{T}^i = \Big( \hat{\mathbf{C}}^i \ \Big|\Big| \ \bar{\mathbf{f}}^i \Big).
+% \end{equation}
+The truth table $\mathcal{T}^i$ is obtained by stacking data of $\hat{\mathcal{C}}^i$ into a 2D matrix $\hat{\mathbf{C}}^i$ (row-wise), and concatenating the result with the column vector $\bar{\mathbf{f}}^i$ whose elements are $\bar{f}^i(c)$, $c\in \mathcal{C}$, that we summarize as
+\begin{equation} \label{eq:truth-table}
+    \mathcal{T}^i = \Big( \hat{\mathbf{C}}^i \ \Big|\Big| \ \bar{\mathbf{f}}^i \Big).
+\end{equation}
+To be precise, any $\mathcal{T}^i$ is more like an empirical truth table than a classic one corresponding to an $n$-ary boolean function, indeed $\mathcal{T}^i$ can have repeated rows and missing Boolean tuple entries. However, $\mathcal{T}^i$ can be used to generate logic explanations in the same way, as we will explain in Sec. \ref{sec:fol}.
+% The purpose of the probability distribution $\alpha$ is threefold: (i) it models the relative importance of concepts enabling the inspection of the most relevant ones for each classification task; (ii) it 
+% \begin{equation}
+%     \hat{\alpha}^i = \frac{\alpha^i}{\max \alpha^i}
+% \end{equation}
+% At training epoch $t$, therefore, the weighted concepts $\tilde{C}^i$ will be the input of the neural network $\hat{y}^i = f^i \big( \tilde{C}^i \big)$. 
+% \fg{Ma il concept awareness non fa già parte della f?}
+% Concept awareness scores close to zero will drop out the least relevant input concepts allowing for simpler logic-based explanations of the neural network's decisions, as explained in Sec. \ref{sec:fol}. 
+% More precisely, only input concepts which satisfy the following condition are considered:
+% \begin{equation}
+%     E_i =  \left\{\langle c_j \rangle  \mid \frac{\alpha^i_j}{\max_j{\alpha^i}} \textgreater 0.5 \right\}, 
+% \end{equation}
+% where $E_i$ denotes the set of input concepts employed to explain the output $f_i$.
+% \subsubsection{Multi-task awareness}
+
+
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=0.6\textwidth]{figs/logic_layers.pdf}
+%     \caption{Multi-Head awareness consists of several awareness layers running in parallel. GC: CAMBIARE NOME DEL LAYER NELLA FIGURA.}
+%     \label{fig:multi_head}
+% \end{figure}
+
+% \subsubsection{Multi-Head awareness}
+
+
+\subsection{Loss Function}
+The entropy of the probability distribution $\alpha^i$ (Eq. \ref{eq:alpha}),
+\begin{equation}
+    \mathcal{H}(\alpha^i) = - \sum_{j=1}^k \alpha^i_j \log \alpha^i_j
+    \label{eq:ent}
+\end{equation}
+is minimized when a single $\alpha^i_j$ is one, thus representing the extreme case in which only one concept matters, while it is maximum when all concepts are equally important. When $\mathcal{H}$ is jointly minimized with the usual loss function for supervised learning $L(f,y)$ (being $y$ the target labels--we used the cross-entropy in our experiments), it allows the model to find a trade off between fitting quality and a parsimonious activation of the concepts, 
+allowing each network $f^i$ to predict $i$-th class memberships using few relevant concepts only.
+%The minimum of this function corresponds to a one-hot encoded configuration of $\alpha$. When $\alpha_j^i=0$ the $j$-th concept is not taken into consideration when predicting the $i$-th class, as described in Eq. \ref{eq:drop}.
+%A cross entropy loss $L(f,y)$ is also employed on the available labels $y$ for standard supervised training.
+%\sm{We define with $L(f,y)$ the cross-entropy loss for supervised data, being $y$ the target labels}.
+Overall, the loss function to train the network $f$ is defined as,
+% The overall loss function to train network $f$ is defined by summing Eq. \ref{eq:ent} with the cross entropy loss $L$ on the available labels $y$ for $f$ used for standard supervised training:
+\begin{equation}
+    \mathcal{L}(f,y,\alpha_1,\ldots,\alpha_r) = L(f,y) + \lambda \sum_{i=1}^r\mathcal{H}(\alpha^i),
+    \label{eq:loss}
+\end{equation}
+where $\lambda > 0$ is the hyperparameter used to balance the relative importance of low-entropy solutions in the loss function. Higher values of $\lambda$ lead to sparser configuration of $\alpha$, constraining the network to focus on a smaller set of concepts for each classification task (and vice versa), thus encoding the inductive human bias towards simple explanations \citep{miller1956magical,cowan2001magical,ma2014changing}. For further details on the impact of $\lambda$ on the model predictions and explanations (see Appendix).
+It may be pointed out that a similar regularization effect could be achieved by simply minimizing the $L_1$ norm over $\gamma^i$. However, as we observed in the Appendix, the $L_1$ loss does not sufficiently penalize the concept scores for those features which are uncorrelated with the predicted category. The Entropy loss, instead, correctly shrink to zero concept scores associated to uncorrelated features while the other remains close to one.
+
+\section{Experiments and Results}
+
+Experiments show how entropy-based networks outperform state-of-the-art white box models such as BRL and decision trees
+% \footnote{The height of the tree is limited to obtain rules of comparable lengths. See Appendix \ref{appendix:exp_details}.} 
+and interpretable neural models such as $\psi$ networks on challenging classification tasks (Table \ref{tab:model-accuracy}). 
+Moreover, the entropy-based regularization and the adoption of a concept-based neural network have minor affects on the classification accuracy of the explainer when compared to
+% the proposed architecture matches (and sometimes surpasses) the classification accuracy provided 
+a standard black box neural network
+% \footnote{%\pb{This is a neural network having the same architecture and hyperparameters of the entropy-based network, with the only exception of the weight hyperparameter $\lambda$ in the loss function (see Eq. \ref{eq:loss}) which is set to $\lambda=0$. This setting makes the network free from any constraint related to explainability.}
+% In the case of MIMIC-II and V-Dem, this is a standard neural network with the same hyperparameters of the entropy-based one, but with a linear layer as first layer. In the case of MNIST and CUB, it is the $g$ model directly predicting the final classes $g:X\rightarrow Y$.}
+directly working on the input data, and a Random Forest model applied on the concepts.% as shown in Table \ref{tab:model-accuracy}.}
+At the same time, the logic explanations provided by entropy-based networks are better than $\psi$ networks and almost as accurate as the rules found by decision trees and BRL, while being far more concise, as demonstrated in Fig.~\ref{fig:multi-objective}. 
+More precisely, logic explanations generated by the proposed approach represent non-dominated solutions \citep{marler2004survey} \textit{quantitatively} measured in terms of complexity and classification error of the explanation. %(i.e. $100$ minus the classification accuracy of the explanation).
+Furthermore, the time required to train entropy-based networks is only slightly higher with respect to Decision Trees but is lower than $\psi$ Networks and BRL by one to three orders of magnitude (Fig. \ref{fig:time}), making it feasible for explaining also complex tasks. 
+% In addition, we observe how the proposed approach consistently outperform $\psi$ networks across all the main metrics (i.e. classification accuracy, explanation accuracy, and fidelity). 
+The fidelity (Table~\ref{tab:fidelity})
+% \footnote{We did not compute the fidelity of decision trees and BRL as they are trivially rule-based models.} 
+of the formulas extracted by the entropy-based network is always higher than $90\%$ with the only exception of MIMIC. This means that almost any prediction made using the logic explanation matches the corresponding prediction made by the model, making the proposed approach very close to a white box model.
+%The combination of 
+These results empirically shows that our method represents a viable solution for a safe %the lawful 
+deployment of \textit{explainable} cutting-edge models.
+% The complexity of decision tree formulas is never below 100 terms, making them useless as explanations.
+% In terms of fidelity the proposed approach closed the gap from white-box models like decision trees and BRL, whose fidelity is always 100\% \textit{by design}.
+
+
+
+\begin{table}[t]
+\small
+\centering
+% \vspace{-3mm}
+%\parbox{.49\linewidth}{
+\begin{tabular}{lll}
+\toprule
+{} &         Entropy net  &        $\psi$ net \\
+\midrule
+\textbf{MIMIC-II     } &  ${\bf 79.11  \pm 2.02}$ &   $51.63 \pm 6.67$ \\
+\textbf{V-Dem         }&  ${\bf 90.90 \pm 1.23}$ &  $69.67 \pm 10.43$ \\
+\textbf{MNIST}         &  ${\bf 99.63 \pm 0.00}$ & $65.68 \pm 5.05$ \\
+\textbf{CUB         }  &  ${\bf 99.86 \pm 0.01}$ &  $77.34 \pm 0.52$ \\
+\bottomrule
+\end{tabular}
+\caption{Out-of-distribution fidelity (\%)}
+\label{tab:fidelity}
+% \vspace{-1mm}
+\end{table}
+
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=0.49\columnwidth]{figs/MIMIC-II_pareto.pdf}
+%     \includegraphics[width=0.49\columnwidth]{figs/V-Dem_pareto.pdf}\\
+%     \includegraphics[width=0.49\columnwidth]{figs/MNIST_pareto.pdf}
+%     \includegraphics[width=0.49\columnwidth]{figs/CUB_pareto.pdf}
+%     % \vskip -2mm    
+%     \includegraphics[width=\columnwidth]{figs/legend.pdf}\\
+%     \caption{Non-dominated solutions  \citep{marler2004survey} (dotted black line) in terms of average explanation complexity and average explanation test error. The vertical dotted red line marks the maximum explanation complexity laypeople can handle (i.e. complexity $\approx 9$, see  \citep{miller1956magical,cowan2001magical,ma2014changing}). Notice how the explanations provided by the Entropy-based Network are always one of the non-dominated solution.
+%     % When humans compare a set of hypotheses outlining the same outcomes, they tend to have an implicit bias towards the simplest ones, making explanations from entropy-based networks the best choice.
+%     }
+%     % \vskip -1mm
+%     \label{fig:multi-objective}
+% \end{figure}
+\begin{table}[t]
+\small
+\centering
+% \vspace{-3mm}
+\begin{tabular}{lllll}
+\toprule
+{} & Entropy net     &              Tree &               BRL &        $\psi$ net\\
+\midrule
+\textbf{MIMIC-II     } &  $28.75$ &    ${\bf 40.49}$ &   $30.48$ &    $     27.62$ \\
+\textbf{V-Dem         }&  $46.25$ &    $72.00$ &   ${\bf 73.33}$ &    $     38.00$ \\
+\textbf{MNIST}         &  ${\bf 100.00}$ &   $41.67$ &  ${\bf 100.00}$ &    $96.00$ \\
+\textbf{CUB         }  &  $35.52$ &    $21.47$ &   ${\bf 42.86}$ &    $41.43$ \\
+\bottomrule
+\end{tabular}
+\caption{Consistency (\%)}
+\label{tab:consistency}
+% \vspace{-2mm}
+\end{table}
+
+
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=.99\columnwidth]{LaTeX/figs/elapsed_time_plot_elens.pdf}
+%     \caption{Time required to train models and to extract the explanations. Our model compares favorably with the competitors, with the exception of Decision Trees. BRL is by one to three order of magnitude slower than our approach.}
+%     % Error bars show the 95\% confidence interval of the mean.
+%     \label{fig:time}
+%     % \vskip -1mm
+% \end{figure}
+
+
+The reason why the proposed approach consistently outperform $\psi$ networks across all the key metrics (i.e. classification accuracy, explanation accuracy, and fidelity) can be explained observing how entropy-based networks are far less constrained than $\psi$ networks, both in the architecture (our approach does not apply weight pruning) and in the loss function (our approach applies a regularization on the distributions $\alpha^i$ and not on all weight matrices). Likewise, the main reason why the proposed approach provides a higher classification accuracy with respect to BRL and decision trees may lie in the smoothness of the decision functions of neural networks which tend to generalize better than rule-based methods, as already observed by Tavares et al. \citep{tavares2020understanding}.
+For each dataset, we report in the Appendix a few examples of logic explanations extracted by each method, as well as in Fig. \ref{fig:experiments}. We mention that the proposed approach is the only matching the %logically correct 
+ground-truth explanation for the MNIST even/odd experiment, i.e. $\forall x, \mathrm{isOdd(x)} \leftrightarrow \mathrm{isOne(x)} \oplus \mathrm{isThree(x)} \oplus \mathrm{isFive(x)} \oplus \mathrm{isSeven(x)} \oplus \mathrm{isNine(x)}$ and $\forall x, \mathrm{isEven(x)} \leftrightarrow \mathrm{isZero(x)} \oplus \mathrm{isTwo(x)} \oplus \mathrm{isfour(x)} \oplus \mathrm{isSix(x)} \oplus \mathrm{isEight(x)}$, being $\oplus$ the exclusive OR.
+In terms of formula consistency, we observe how 
+BRL is the most consistent rule extractor, closely followed by the proposed approach (Table \ref{tab:consistency}).
+
+\section{Impact and Significance}
+Summary of contributions: a sparse attention mechanism for concept bottlenecks.
+
+Summary of results: a scalable, self-explaining neural approach providing first-order logic explanations for its predictions. The new approach is almost as accurate as black box models (e.g., an equivalent neural model with same number of parameters/layers, random forest). The explanations provided by the new approach are: (i) much more concise than those provided by existing white box rule learners (e.g., decision trees and bayesian rule lists), (ii) as accurate as the ones provided by existing white boxes. It's a way to rigorously assess whether concept-based models learn as intended by checking how they arrived to a prediction.
+- the concept-based and the XAI field as novel self-explaining approach which may encourage further advances in concept learning
+
+- other research disciplines as the extraction of FOL rules can be useful to answer research questions in a human interpretable way
+
+- production/society as self-explaining models might become a legal requirement
+
+
+Impact/significance: self-explaining models may soon become a legal requirement in Europe for the ethical deployment of AI models. So, this work has an impact on:
+
+- the concept-based and the XAI field as novel self-explaining approach which may encourage further advances in concept learning
+
+- other research disciplines as the extraction of FOL rules can be useful to answer research questions in a human interpretable way
+
+- production/society as self-explaining models might become a legal requirement
+
+
+\section{The Accuracy-vs-Interpretability Trade-Off}
+Next steps: the proposed approach provides a good compromise between accuracy and explainability and it's Pareto optimal compared to black and white-boxes but it does not outperforms existing approaches on BOTH explainability and accuracy. How can we solve this trade-off?
+
+
+
+\section*{Papers}
+\nobibliography*
+\begin{itemize}
+    \item \bibentry{ciravegna2021logic}
+    \item \bibentry{barbiero2021entropy}
+    \item \bibentry{jain2022extending}
+    \item Federico Siciliano, Pietro Barbiero, ..., Pietro Lio'. Explaining Neural Networks Using a Ruleset Based on Interpretable Concepts. \textit{arXiv preprint arXiv:XXXX.YYYYY},2023
+\end{itemize}

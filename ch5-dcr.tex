@@ -1,0 +1,790 @@
+\chapter{Interpretable Concept Reasoning}
+\label{chapter:DCR}
+
+\textbf{Motivation---} If explanations do not match model predictions we have a mismatch and a drop of fidelity. This drop of fidelity induces a drop in human understanding and trust.
+
+\textbf{Solution---} an interpretable concept-based model using concept embeddings.
+
+The \textbf{key innovation} of this chapter is using neural networks to generate interpretable rules.
+
+\section{Deep Concept Reasoning}
+% \subsection{Goal: Interpretable Model with Top Performances}
+Here we describe the ``Deep Concept Reasoner'' (DCR, Figure~\ref{fig:dcr-method}), the first interpretable concept-based model based on concept embeddings.  Similarly to existing models based on concept embeddings, DCR exploits high dimensional representations of the concepts. However, in DCR, such representations are only used to compute a logic rule. The final prediction is then obtained by evaluating such rule on the concepts truth values and not on their embeddings, thus maintaining a clear semantics and providing a totally interpretable decision. 
+%DCR learns logic rules by composing concept literals into a logical formula identifying relevant literals using concept embeddings. 
+Being differentiable, DCR is trainable as an independent module on concept databases, but it can also be trained end-to-end with differentiable concept encoders.
+% , relying its class prediction to its concept activations, and uses 
+% symbolically 
+% the rule itself to provide the final classification. 
+%On the other hand, we enable our method to be highly expressive, therefore able to achieve a competitive predictive performance, by allowing our model to build such rules using the rich information contained in the concept embeddings~\cite{zarlenga2022concept}.
+% However, our model differently from common fuzzy rule-based systems \cite{magdalena2015fuzzy}.
+% , to achieve competitive predictive performance and inspired by \cite{zarlenga2022concept}, our model builds the rules on the richer embedding representations of concepts.
+% In the next sections, we show how the entire process takes place. 
+In the following section, we describe \mbox{(1) the} syntax of the rules we aim to learn (Section~\ref{sec:rulepred}), \mbox{(2) how} to (neurally) generate and execute learnt rules to predict task labels (Section~\ref{sec:ruleexec}), (\mbox{3) how} DCR learns simple rules in specific t-norm semantics (Section~\ref{sec:ruleexec}), and \mbox{(4) how} we can generate global and counterfactual explanations with DCR (Section~\ref{sec:ruleadv}). We provide Figure~\ref{fig:dcr-method} as a reference to graphically follow the discussion.
+% \todo{add section on semantics}
+% we show how concept embeddings can be exploited to obtain a symbolic fuzzy rule. 
+% Lastly in Section \ref{sec:ruleadv} we consider more advanced topics like, obtaining global explanations, concept interventions and counterfactual rules.
+% \todo{Maybe 3.3 $->$ New Section?}
+
+
+\begin{figure*}[!t]
+    \centering
+    % \begin{subfigure}[b]{1.\textwidth}
+    %     \centering
+    %     \includegraphics[clip, trim=0.4cm 0cm 7cm 0cm, width=0.2\textwidth]{figs/dcr_method_simple.pdf}
+    %     \caption{$y=x$}
+    %     \label{fig:y equals x}
+    % \end{subfigure}
+    % \begin{subfigure}[b]{0.6\textwidth}
+    %     \centering
+    %     \includegraphics[clip, trim=0.4cm 0cm 7cm 0cm, width=0.62\textwidth]{figs/dcr_method_horizontal.pdf}
+    %     \caption{$y=x$}
+    %     \label{fig:y equals x}
+    % \end{subfigure}
+    \includegraphics[clip, trim=0.4cm 0cm 7cm 0cm, width=0.22\textwidth]{figs/dcr_method_simple.pdf}
+    \qquad
+    \includegraphics[clip, trim=0cm 0cm 2.9cm 0cm, width=0.62\textwidth]{figs/dcr_method_horizontal.pdf}
+    \caption{(left) Deep Concept Reasoner (DCR) generates fuzzy logic rules using neural models on concept embeddings. Then DCR executes the rule using the concept truth degrees to evaluate the rule symbolically. (right) Schema of DCR modules: first neural models $\phi$ and $\psi$ generate the rule, and then the rule is executed symbolically.}
+    \label{fig:dcr-method}
+\end{figure*}
+
+
+\subsection{Rule Syntax}
+\label{sec:rulepred}
+% \giu{Two ideas for description: this section is about "predicting the rule". So in principle, it could have already included the $\phi$ and $\psi$ functions. They are just the implementation of the two filters. The idea is that, at the end of this section, the user can "read" the rule from the output of the nets.  The next section is about the rule execution: given the "rule" (i.e. output of $\phi$ and $\psi$) and given the concepts truth degrees (the model) $\hat{c}$, we can execute / interpret / evaluate the rule on this model.}
+% Deep Concept Reasoners are designed such that the positive class predictions for each sample are obtained as output of a specific fuzzy rule. 
+To understand the rationale behind DCR's design, we begin with an illustrative toy example:
+\begin{example}
+\label{ex:banana}
+Consider the problem of defining the fruit ``banana'' given the vocabulary of concepts ``soft'', ``round'', and ``yellow''. A simple definition can be $y_{\textit{banana}} \Leftrightarrow \neg c_{\textit{round}} \land c_{\textit{yellow}}$. From this rule we can deduce that (i) being ``soft'' is irrelevant for being a ``banana'' (indeed bananas can be both soft or hard), and (ii) being both ``\underline{not} round" and ``yellow'' is relevant to being a ``banana''.
+% the following example where a concept-based model is used to predict the type of fruit in an input image, e.g. a ``banana'',  having as available concepts, e.g. ``soft'', ``round'' and ``yellow''. 
+% Namely, we are interested in computing a rule that would classify a given sample as ``banana'', given the set of available concepts as a vocabulary to use to refer to the predicted class. For instance we can expect:
+% We would like to obtain $\psi_{banana}(\mathbf{c}_{yellow}) = \psi_{banana}(\mathbf{c}_{round}) =  1$, as being ``round'' and ``yellow'' are relevant concept for predicting ``banana''.
+% \begin{equation*}
+% y_{banana} \leftrightarrow \neg c_{round} \land c_{yellow}
+% \end{equation*}
+\end{example}
+As in this example, DCR rules can express whether a concept is \textbf{\emph{relevant}} or not (e.g., ``soft''), and whether a concept plays a positive (e.g., ``yellow'') or negative (e.g., ``\underline{not} round'') \textbf{\emph{role}}. 
+% These rules combine the activations of concepts $\mathbf{\hat{c}}$ to get class predictions in $\mathbf{\hat{y}}$ in this way: each rule can express a positive or negative role for the concepts, and they can filter out the concepts that are not ``relevant" for the class prediction.
+To formalize this description of rule syntax, we let $l_{ji}$ denote the literal of concept $c_i$ (i.e., $\hat{c}_i$ or $\neg \hat{c}_i$) representing the \emph{role} of the concept $i$ for the $j$-th class. Similarly, we let $r_{ji} \in \{0,1\}$ representing whether $\hat{c}_i$ is \emph{relevant} for predicting the class $y_j$.
+% DCR rules have the following syntax:
+For each sample $\mathbf{x}$ and predicted class $\hat{y}_j$, DCR learns a rule with the following syntax\footnote{Here and in all equations we omit the explicit dependence on $\mathbf{x}$ for simplicity, i.e., we write $\hat{y}_j$ for $\hat{y}_j(\mathbf{x})$.}:
+\begin{equation} \label{eq:target-rule}
+    \hat{y}_j \Leftrightarrow \bigwedge_{i:\; r_{j i} = 1}{l_{ji}}
+\end{equation}
+% where: , and $r_{ji}$ can be thought of as a flag denoting whether $\hat{c}_i$ is relevant for predicting the class $\hat{y}_j$. 
+Such a rule defines a logical statement for why a given sample is predicted to have label $\hat{y}_j$ using a conjunction of relevant concept literals (i.e., $\hat{c}_i$ or $\neg \hat{c}_i$).%, which can potentially be negated.
+
+
+% Notice that, given a class $y_j$, the corresponding rule is completely determined if, for all concepts $c_i$, we know two indicators: (1) whether the concept is negated or not in the literal $l_{ji}$ and (2) the concept relevance flag $r_{ji}$.
+
+% In particular, we take $y_j$ as the conjunction of only the effectively relevant concepts $\hat{c}_i$ (or their negation) for the prediction. 
+%For the sake of simplicity and without loss of generality, in the following sections each rule refers to a fixed sample $\mathbf{x}$, therefore allowing us to omit writing the explicit dependence on the $\mathbf{x}$ for all other variables. 
+% Without loss of generality \todo{say why: it's a DNF!}, we can structure rules as a conjunction of concept literals (or truth degrees) $\hat{c}_i$:
+% \begin{equation}
+%     \hat{y}_j \leftarrow \bigwedge_i \hat{c}_i
+% \end{equation}
+% For this sample we aim to learn a rule such as $\hat{y}_{\text{banana}} \leftrightarrow \neg \hat{c}_{\text{round}} \wedge \hat{c}_{\text{yellow}}$. As we can notice, not all of the concepts are necessary to explain the prediction,  
+% Notice the two key elements of this rule: The concept ``round'' is negated and the concept ``soft'' is missing. More generally, we aim to: \\
+
+
+% At the same time we expect $\psi_{banana}(\mathbf{c}_{soft}) = 0$, as bananas can be both soft or hard. Once we know which concepts are relevant, we want to understand whether they contribute positively or negatively to the class ``banana''. 
+% Therefore, we expect $\phi_{banana}(\mathbf{c}_{round}) = 0$ as bananas are not round objects, while we would expect $\phi_{banana}(\mathbf{c}_{yellow}) = 1$, as bananas are yellow. Given the values of the $\phi(\cdot)$ and $\psi(\cdot)$ functions, we can uniquely identify the corresponding logical rule:
+
+
+
+
+
+
+
+% \textbf{(Aim 1) Select relevant concepts} e.g., being ``soft'' might be not relevant for the class ``banana'', as bananas can be both soft or hard, while being ``round'' and ``yellow'' could be relevant.
+% To this end we use a parameter $r_{ji} \in \{0,1\}$ corresponding to the importance of concept $i$ for class $j$:
+% \begin{equation} \label{eq:target-irrelevance}
+%     r_{ji} = 
+%     \begin{cases}
+%         1 & \text{ if } \hat{c}_i \text{ is ``relevant'' for $\hat{y}_j$} \\
+%         0 & \text{ otherwise}
+%     \end{cases}
+% \end{equation}
+% In general, we expect $\mathbf{r}_j=(r_{j1},\ldots,r_{jk})$ to have a different degree of sparsity depending on the class and on the data set. In some cases we may expect several concepts to be relevant (more $r_{ji}=1$), while in others just few of them (more $r_{ji}=0$). In the practice, we take $r_{ji}\in[0,1]$, as defined in Equation (\ref{eq:rel}).
+% %  As a result on average our expectation of a concept being relevant is around $0.5$:
+% % \begin{equation} \label{eq:target-expect}
+% %     \mathbb{E}[r_{ji}=1] = 0.5
+% % \end{equation}
+
+% Apart from selecting the relevant concepts for a class, we are also interested in expressing their sign, i.e. if they have a positive or negative role for the prediction. 
+% \\
+% \textbf{(Aim 2) Learn concept literals} e.g., \textit{not being} ``round'' might be relevant for a ``banana'' as much as \textit{being} ``yellow''. To this end, we denote by $l_{i} \in [0,1]$ the  literal corresponding to concept $i$:
+% \begin{equation} \label{eq:target-literal}
+%     l_{i} = 
+%     \begin{cases}
+%         \hat{c}_i & \text{ if the concept $i$ is ``true'' (e.g., } \hat{c}_i \geq 0.5 \text{)} \\
+%         \neg\hat{c}_i & \text{otherwise.} 
+%         % \text{don't care} & \text{ otherwise}
+%     \end{cases}
+% \end{equation}
+
+% Abusing notation, we assume each $l_{i}$ to denote both the propositional variable $\hat{c}_i$ or its negation $\neg\hat{c}_i$, and the corresponding truth-value $\hat{c}_i$ or $1-\hat{c}_i$, respectively.
+% % \todo{FRA: literals do not really depend on classes.. remove j?}
+% \giu{I think fuzzy-logic and logic need to be a preliminary/background, or I will skip such details later. Not many people will know what a truth-value is, and there will be a lot of confusion with this negation here if not explained before.}
+% \\
+% \textbf{(Aim 3) Identify classes with the conjunction of relevant concept literals} using the learnt parameters $r_{ji}$ and $l_{i}$:
+% \begin{equation} \label{eq:target-rule}
+%     \hat{y}_j \leftrightarrow \bigwedge_{i:\; r_{j i} = 1}{l_{i}}
+% \end{equation}
+% which reads as: (case a) if a concept is relevant (i.e. $r_{j i} = 1$), then it will appear with its sign in the conjunction; (case b) otherwise the concept is irrelevant and we can filter it out from the expression. As a result, in the example our  model can learn the rule $\hat{y}_{\text{banana}} \leftrightarrow \neg \hat{c}_{\text{round}} \wedge \hat{c}_{\text{yellow}}$ by learning $\mathbf{l} = [0.5,0.9,0.9]$ and $\mathbf{r}_{\text{banana}} = [0,1,1]$. The next section describes how we design a neural-symbolic architecture learning these rules.
+% \todo{Stress more the difference between the rule and the way
+% $f$ is implemented?}
+
+
+\subsection{Rule Generation and Execution}
+\label{sec:ruleexec}
+Having defined the syntax of DCR rules, we describe how to \textit{generate} and \textit{execute} these rules in a differentiable way. To generate a rule we use two neural modules $\phi_j$ and $\psi_j$ which determine the role and relevance of each concept, respectively. Then, we execute each rule using the concepts' truth degrees of a given sample.
+% In the previous section, we have seen how we can uniquely obtain a fuzzy rule predicting a class $\hat{y}_j$ for a certain sample $\mathbf{x}$. Here we show how we can execute this rule in a fully differentiable fashion, by exploiting two different neural  architectures $\phi_j$ and $\psi_j$ to determine the sign of the concept literals and which are the relevant ones, respectively. 
+We split this process into three steps: (i) learning each concept's roles, (ii) learning each concept's relevance, and (iii) predicting the task using the relevant concepts.
+
+% by reading the output of the two functions $\phi_j(\mathbf{c}_i)$ and  $\psi_j(\mathbf{c}_i)$, $\forall i$. In this section, we investigate how we can execute this rule symbolically on a given set of concept predictions $\{\hat{c}_i\}$. Notice that, at this stage, only the concept predictions $\{\hat{c}_i\}$ and not their embeddings $\{\hat{\textbf{c}}_i\}$ will be given as input to the rule execution process. This is a fundamental property to ensure full interpretability of the prediction.
+
+% We compute these two indicators using two neural networks for each class $\hat{y}_j$.
+
+
+% \paragraph{Conditional negation.} 
+\paragraph{Concept role}
+% \giu{Input/Output domains}
+\underline{Generation:} To determine the \emph{role} (positive/negative) of a concept, we use a feed-forward neural network $\phi_j: \mathbb{R}^m \rightarrow [0,1]$, with $m$ being the dimension of each concept embedding.
+% In order to self-arrange the sign of the concept activation provided as input to the function $f$ to predict a class $j$, we consider a feed-forward neural network $\phi_j: \mathbb{R}^m \rightarrow [0,1]$. 
+The neural model $\phi_j$ takes as input a concept embedding $\hat{\mathbf{c}}_i \in \mathbb{R}^m$ and returns a soft indicator representing the role of the concept in the formula, that is, whether in literal $l_{ji}$ the concept should appear negated (e.g., $\phi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{round}}) = 0$)  or not (e.g., $\phi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{yellow}}) = 1$).
+% of Example \ref{ex:banana}. 
+% The conditional negation function $n(\hat{c}_i, \phi_j(\mathbf{c}_i)$  negates the concepts $\hat{c}_i$ based on the soft indicator computed by $\phi_j(\mathbf{c}_i)$.
+\underline{Execution:} When we execute the rule, we need to compute the actual truth degree of a literal $l_{ji}$ given its role $\phi(\hat{\mathbf{c}}_i)$. We define this truth degree  $\ell_{ji} \in [0,1]$. In particular, we want to (i) forward the same truth degree of the concept, i.e.  $\ell_{ji} = \hat{c}_i$,  when $\phi(\hat{\mathbf{c}}_i)=1$,  and (ii) negate it, i.e. $\ell_{ji} = \neg \hat{c}_i$,  when $\phi(\hat{\mathbf{c}}_i)=0$.
+% we evaluate the indicated \emph{role} $\phi_{j}(\mathbf{\hat{c}}_i)$ on the corresponding concept truth-value $\hat{c}_i$. 
+% To this end, 
+% we need to produce an object $\ell_{ji} \in [0,1]$ which models the concept literal $l_{ji}$, that is, $\ell_{ji} = \hat{c}_i$ if $\hat{c}_i=1$ and $\ell_{ji} = \neg \hat{c}_i$ if $\hat{c}_i=0$.
+% Note that we only care when $\ell_{ji} = 1$, since the rule in Equation~\ref{eq:target-rule} predicts $\hat{y}_j=1$ \emph{if and only if} all the (relevant) literals $l_{ji}= 1$. We can then safely ignore when $\ell_{ji}= 0$ as the rule will not be in use. 
+This behaviour can be generalized by a fuzzy equality $\Leftrightarrow $ when both $\phi_j$ and $\hat{c}$ are fuzzy values, i.e.: 
+% \footnote{In the truth table, the significant rows are marked in green, i.e., where $\ell_{ji}=1$.}:
+\begin{equation}
+    \label{eq:iff}
+     \ell_{ji} = (\phi_j(\hat{\mathbf{c}}_i) \Leftrightarrow \hat{c}_{i})
+\end{equation}
+% {\small
+% \begin{center}
+% \begin{tabular}{cc|c}
+%      $\hat{c}_i$ & $\phi_j(\hat{\mathbf{c}})$ & $\ell_{ji}$ \\
+%      \hline
+%      \rowcolor{green!30}0 & 0 & 1 \\
+%      \rowcolor{gray!30}0 & 1 & 0 \\
+%      \rowcolor{gray!30}1 & 0 & 0 \\
+%      \rowcolor{green!30}1 & 1 & 1 \\
+% \end{tabular}
+% \end{center}
+% }
+\begin{example}
+    For a given object consider $\hat{c}_{\textit{round}}=0$ and $\phi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{round}})=0$. Then we get $\ell_{\textit{banana},\textit{round}}=(\phi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{round}}) \Leftrightarrow \hat{c}_{\textit{round}})=\neg \hat{c}_{\textit{round}}=1$. If instead we had $\phi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{round}}) = 1$, then $\ell_{\textit{banana},\textit{round}}=(\phi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{round}}) \Leftrightarrow \hat{c}_{\textit{round}})=0$.
+\end{example}
+% We can easily verify that when $\ell_{ji} \approx 1$ this equation approximates the concept literal $l_{ji}$ i.e., $\ell_{ji} \approx \hat{c}_i$ if $\hat{c}_i=1$ and $\ell_{ji} \approx \neg \hat{c}_i$ if $\hat{c}_i=0$:
+% {\small
+% \begin{center}
+% \begin{tabular}{cc|c}
+%      $\hat{c}_i$ & $\phi_j(\hat{\mathbf{c}})$ & $\ell_{ji}$ \\
+%      \hline
+%      \rowcolor{gray!50}0 & 0 & 1 \\
+%      0 & 1 & 0 \\
+%      1 & 0 & 0 \\
+%      \rowcolor{gray!50}1 & 1 & 1 \\
+% \end{tabular}
+% \end{center}
+% } 
+% However, as we will show in our examples, this network tends to have very crisp values (i.e. either $0$ or $1$) at the end of the learning.  
+
+
+% we will have $\ell_{ji}$ tending to the actual literal $l_{ji}$, i.e. $\ell_{ji}\approx \hat{c}_{i}$ if $\hat{c}_{i}\approx 1$ and $\ell_{ji}\approx \neg\hat{c}_{i}$ otherwise.
+
+% In practice, we notice that when $\phi_j(\hat{\mathbf{c}}_i) \approx \hat{c}_{i}$ 
+
+% and we will have $\ell_{ji}$ tending to the actual literal $l_{ji}$, i.e. $\ell_{ji}\approx \hat{c}_{i}$ if $\hat{c}_{i}\approx 1$ and $\ell_{ji}\approx \neg\hat{c}_{i}$ otherwise.
+
+% To this end, we generate the object $\ell_{ji}\in[0,1]$ to.
+
+% (e.g., $\phi_{banana}(\hat{\mathbf{c}}_{round}) = 0$ matches the concept truth-value $\hat{c}_{round} = 0$).
+% by enforcing the correspondence between the indicator $\phi_{j}(\mathbf{\hat{c}}_i)$ and the truth-value $\hat{c}_i$, e.g. by using a logical equivalence that can be calculated according to the chosen fuzzy semantics:
+% \begin{equation}
+%     \label{eq:iff}
+%      \ell_{ji} = \phi_j(\hat{\mathbf{c}}_i) \leftrightarrow \hat{c}_{i}
+% \end{equation}
+% \giu{This next two sentences are hard to follow (I understand them but readers may not).}The value $\ell_{ji}\in[0,1]$ indicates if $\phi_j$ recognizes as correct for the prediction $\hat{y}_j$ the truth-value $\hat{c}_i$ (i.e. $\ell_{ji}\approx 1$) or if it should be negated (i.e. $\ell_{ji}\approx 0$).
+
+
+% As we will see from Equation \ref{eq:ruletarget}, having $l_{ji}\approx 1$ is fundamental to get a positive prediction $\hat{y}_j$, and the only other option is that the concept $i$ is irrelevant for the class $j$. Hence, the only interesting case is assuming $\ell_{ji}\approx 1$. As a rule of thumb, $\phi_j(\hat{\mathbf{c}}_i) \approx \hat{c}_{i}$ and we will have $\ell_{ji}$ tending to the actual literal $l_{ji}$, i.e. $\ell_{ji}\approx \hat{c}_{i}$ if $\hat{c}_{i}\approx 1$ and $\ell_{ji}\approx \neg\hat{c}_{i}$ otherwise. 
+% The reader can easily verify in the table below that a conditional negation behave 
+% \footnote{The negation is applied when $\phi_j(\mathbf{\hat{c}}) = 0$)}
+% exactly like an if-and-only-if for crisp values:
+% \begin{center}
+% \begin{tabular}{cc|c}
+%      $\hat{c}$ & $\phi_j(\hat{\mathbf{c}})$ & $\ell_{ji}$ \\
+%      \hline
+%      0 & 0 & 1 \\
+%      0 & 1 & 0 \\
+%      1 & 0 & 0 \\
+%      1 & 1 & 1 \\
+% \end{tabular}
+% \end{center}
+% Notice that,  also intermediate values are allowed, which is fundamental to learn such network. 
+% However, as we will show in our examples, this network tends to have very crisp values (i.e. either $0$ or $1$) at the end of the learning.  
+
+
+% \paragraph{Filtering}
+\paragraph{Concept relevance.}
+\underline{Generation:} To determine the \emph{relevance} of a concept $\mathbf{\hat{c}}_i$, we use another feed-forward neural network $\psi_j: \mathbb{R}^m \rightarrow [0,1]$. The model $\psi_j$ takes as input a concept embedding $\hat{\mathbf{c}}_i \in \mathbb{R}^m$ and returns a soft indicator representing the likelihood of a concept being relevant for the formula (e.g., $\psi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{soft}}) = 1$) or not (e.g., $\psi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{yellow}}) = 0$).
+\underline{Execution:} When we execute the rule, we need to compute the truth degree of a literal given its relevance $r_{ji}$. We define the truth degree of a relevant literal as $\ell^r_{ji} \in [0,1]$, where $r$ stands for ``relevant''. In particular, we want to  \mbox{(i) filter} irrelevant concepts when $\psi_j(\hat{\mathbf{c}}_i) = 0$ by setting $\ell^r_{ji}=1$, and  \mbox{(ii) retain} relevant literals when $\psi_j(\hat{\mathbf{c}}_i) = 1$ by setting $\ell^r_{ji}= \ell_{ji}$. This behaviour can be generalized to fuzzy values of $\psi_j$ as follows: 
+% This is simply $\ell^r_{ji} = \ell_{ji}$ if $r_{ji} =1$ and $\ell^r_{ji} = 1$  if $r_{ji} = 0$
+%produce an object $\ell^\pi_{ji} \in [0,1]$ representing a relevant literal, that is, $\ell^\pi_{ji}\approx \ell_{ji}$ if the concept $i$ is relevant for class $j$. 
+%Note that setting $\ell^\pi_{ji}=1$ makes the literal $\ell_{ji}$ irrelevant since ``$1$'' is neutral w.r.t.\ the conjunction in Equation~\ref{eq:ruletarget}. 
+
+% We can then \mbox{(i) filter} irrelevant concepts out by setting the corresponding $\ell^\pi_{ji}=1$ when $\psi_j(\hat{\mathbf{c}}_i) = 0$, or \mbox{(ii) retain} relevant literals setting $\ell^\pi_{ji}= \ell_{ji}$ when $\psi_j(\hat{\mathbf{c}}_i) = 1$. For this reason we model $\ell^\pi_{ji}$ as follows:
+% In particular  we need $\ell^\pi_{ji} \approx \ell_{ji}$ if the concept is relevant and $\ell_{ji} \approx \neg \hat{c}_i$ if $\hat{c}_i=0$.
+% To establish the relevance of a concept, we use another feed-forward neural network $\psi_j: \mathbb{R}^m \rightarrow [0,1]$ predicting the likelihood of a concept being relevant, i.e. $r_{ji}$. This network takes as input any concept embedding $\hat{\mathbf{c}}_i \in \mathbb{R}^m$ and returns for each class $j \in [1,\dots,o]$ a degree of relevance for that concept (e.g. $\psi_{banana}(\hat{\mathbf{c}}_{soft}) = 0$ and $\psi_{banana}(\hat{\mathbf{c}}_{yellow}) = 1$).
+% Therefore, given as input a literal $\ell_{ji}$, we define a filtered literal $\ell^\pi_{ji}$ to be as close as possible to $\ell_{ji}$ when $\psi_j(\hat{\mathbf{c}}_i) \approx 0$ (i.e. no filter), and to output a value close to $1$ when $\psi_j(\hat{\mathbf{c}}_i) \approx 0$ (i.e. filter).
+% We implement the filtering function as a fuzzy material implication:
+\begin{equation}~\label{eq:filter}
+    \ell^r_{ji} = (\psi_j(\hat{\mathbf{c}}_i)\Rightarrow \ell_{ji})= (\neg \psi_j(\hat{\mathbf{c}}_i) \vee \ell_{ji})
+\end{equation}
+
+Note that setting $\ell^r_{ji}=1$ makes the literal $l_{ji}$ irrelevant since ``$1$'' is neutral w.r.t.\ the conjunction in Equation~\ref{eq:ruletarget}. 
+
+% We invite the reader to verify that Equation~\ref{eq:iff} and~\ref{eq:filter} model the desired behavior (gray represents useless configurations and red conditions making a rule inactive):
+% {\small
+% \begin{center}
+% % \begin{tabular}{cc|c}
+% %      $\hat{c}_i$ & $\phi_j(\hat{\mathbf{c}})$ & $\ell_{ji}$ \\
+% %      \hline
+% %      \rowcolor{green!30}0 & 0 & 1 \\
+% %      \rowcolor{gray!30}0 & 1 & 0 \\
+% %      \rowcolor{gray!30}1 & 0 & 0 \\
+% %      \rowcolor{green!30}1 & 1 & 1 \\
+% % \end{tabular}
+% % \qquad
+% \begin{tabular}{cc|c}
+%      $\psi_j(\hat{\mathbf{c}}_i)$ & $\ell_{ji}$ & $\ell^\pi_{ji}$ \\
+%      \hline
+%      \rowcolor{gray!30}0 & 0 & 1 \\
+%      \rowcolor{gray!30}0 & 1 & 1 \\
+%      \rowcolor{red!30}1 & 0 & 0 \\
+%      \rowcolor{green!30}1 & 1 & 1 \\
+% \end{tabular}
+% \end{center}
+% }
+
+\begin{example}
+    For a given object of type ``banana'', let the concept ``soft'' be irrelevant, that is $\psi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{soft}}) = 0$. Then we get $\ell^r_{\textit{banana},\textit{soft}}=(\psi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{soft}}) \Rightarrow \ell_{\textit{banana},\textit{soft}})=1$, independently from the content of $\hat{c}_{\textit{soft}}$ or $\ell_{\textit{banana},\textit{soft}}$. Conversely, let the concept ``yellow'' by relevant, that is $\psi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{yellow}}) = 1$, and let its concept literal be $\ell_{\textit{banana},\textit{yellow}}=\hat{\mathbf{c}}_{\textit{yellow}}=1$. As a result, we get
+    $\ell^r_{\textit{banana},\textit{yellow}}=(\psi_{\textit{banana}}(\hat{\mathbf{c}}_{\textit{yellow}}) \Rightarrow \ell_{\textit{banana},\textit{yellow}})=1$.
+    % Let instead the neural model provide the output $\phi_{banana}(\hat{\mathbf{c}}_{round}) = 1$, then the literal $\ell_{banana,round}=(\phi_{banana}(\hat{\mathbf{c}}_{round}) \leftrightarrow \hat{c}_{round})=0$.
+\end{example}
+
+% The default value for each $\psi_j$ is set to 1 because, when a literal is filtered, it becomes neutral w.r.t.\ the conjunction which will be applied immediately after to predict the class.
+
+
+\paragraph{Task prediction}
+Finally, we conjoin the relevant literals $\ell^r_{ji}$ to obtain the task prediction $\hat{y}_j$:
+\begin{equation}
+\label{eq:ruletarget}
+    \hat{y}_j = \bigwedge_{i=1}^k \ell^r_{ji} 
+\end{equation}
+\begin{example}
+    For a given object of type ``banana'', consider the following truth degrees for the concepts:  $\hat{c}_{soft}= 1, \hat{c}_{round} = 0,\hat{c}_{yellow} = 1$. Consider also the following values for the role and relevance for the class ``banana'': $\phi_{\textit{banana}}(\hat{\mathbf{c}}_{i})=[0,0,1]$ and $\psi_{\textit{banana}}(\hat{\mathbf{c}}_{i})=[0,1,1]$ for $i \in \{\textit{soft}, \textit{round}, \textit{yellow}\}$. Then, we obtain the final prediction for class $banana$ as: 
+    \[
+    \begin{array}{r}
+    \hat{y}_{\textit{banana}} = \bigwedge_{i=1}^3\left(\neg \psi_{\textit{banana}}(\hat{\mathbf{c}}_i) \vee (\phi_{\textit{banana}}(\hat{\mathbf{c}}_i) \Leftrightarrow \hat{c}_{i})\right) =    \\
+    =(1\vee(0\Leftrightarrow 1))\wedge (0\vee(0\Leftrightarrow 0))\wedge (0\vee(1\Leftrightarrow 1))=
+    \\
+    =(1\vee 0)\wedge (0\vee 1)\wedge (0\vee 1)=1 \wedge 1 \wedge 1 = 1
+    \end{array}
+    \]
+\end{example}
+We remark that the models $\phi_j$ and $\psi_j$: (a) generate fuzzy logic rules using concept embeddings which might hold more information than just concept truth degrees, and (b) do not depend on the number of input concepts which makes them applicable---without retraining---in testing environments where the set of concepts available differs from the set of concepts used during training.
+We also remark that the whole process is differentiable as the neural models $\phi_j$ and $\psi_j$ are differentiable as well as the fuzzy logic operations as we will see in the next section.
+% concepts $\hat{c}_i$ may represent fuzzy truth-degrees in $[0,1]$.
+
+% \subsubsection{Rule Implementation}
+\subsection{Rule Parsimony and Fuzzy Semantics}
+\paragraph{Rule parsimony} 
+Simple explanations and logic rules are easier to interpret for humans~\cite{miller1956magical,rudin2019stop}. We can encode this behaviour within the DCR architecture by enforcing a certain degree of competition among concepts to make only relevant concepts survive. To this end, we design a special activation function for the neural network $\psi_j$ rescaling the output of a log-softmax activation:
+\begin{align}
+    \gamma_{ji} &= \log \Bigg( \frac{\exp(\text{MLP}_j(\hat{\mathbf{c}}_i))}{\sum_{i^\prime=1}^k \exp(\text{MLP}_j(\hat{\mathbf{c}}_{i^\prime}))} \Bigg) 
+    % \ ,\ i=[1,\dots,k] 
+    \label{eq:comp}\\
+    r_{ji} &= \psi_j(\hat{\mathbf{c}}_i) = \sigma \Bigg(\gamma_{ji} - \frac{1}{k} \sum_{i^\prime=1}^k \gamma_{ji^\prime} \Bigg)\label{eq:rel}
+\end{align}
+% The log-softmax function which enforces a soft competition for concept survival for each class $j$. Rescaling the log-softmax scores $\gamma_{ji}$ to have zero-mean. 
+This way, if the scores $\gamma_{ji}$ are uniformly distributed, then we expect the network $\psi_j$ to select half of the concepts. 
+% that is, $\mathbb{E}[r_{ji} \geq 0.5 | \mathcal{U}(\gamma_{ji})] = 0.5$. 
+% This way we obtain a behaviour which models Equations~\ref{eq:target-irrelevance} and~\ref{eq:target-expect} as it will be hard for the model to set all values to $1$ (all concepts are relevant) or $0$ (all concepts are irrelevant). 
+We can also parametrise this function by introducing a parameter $\tau \in [-\infty, \infty]$ that allows a user to bias the default behaviour of the activation function: 
+% \begin{equation}
+% \label{eq:relfin}
+$r_{ji} = \sigma (\gamma_{ji} - \frac{\tau}{k} \sum_{i^\prime=1}^k \gamma_{ji^\prime} )$.
+% \end{equation}
+A user can increase $\tau$ to get more relevance scores closer to $1$ (more complex rules) or decrease it to get more relevance scores closer to $0$ (simpler rules).
+
+
+
+
+
+
+
+
+
+
+
+%We design our architecture interconnecting both neural and symbolic functions to obtain for each sample an interpretable logic rule such as the one described in the previous paragraph. The architecture is composed of: a concept relevance learner to model Equation~\ref{eq:target-irrelevance}, a concept literal learner to model Equation~\ref{eq:target-literal}  and a logic aggregator to model Equation~\ref{eq:target-rule}. We discuss how to make gradient flow through logic operations in Section~\ref{sec:semirings}. \giu{I would not anticipate the gradient issue here (confusing); and I am not sure we really want to fix a specific semiring in the paper. I really consider this an implementation issue akin to an hyperparam.}
+
+%\paragraph{Learning the relevant concept literal}
+%\todo{to say that g can be learnable or given.. and so the $\hat{c}_i$}
+%\giu{consider removing the word "relevant" here. We focus on learning the f that means learning $\phi_j,\psi_j$ etc}
+%The first part of our architecture aims at learning relevant concept literals. To this goal we use a two-steps approach. (\textbf{step 1}) First, we use  a feed-forward neural network $\phi_j: \mathbb{R}^k \rightarrow [0,1]$ that takes as input a concept embedding $\hat{\mathbf{c}}_i \in \mathbb{R}^k$ and returns,whether the concept should be negated (i.e. $\phi_j(\hat{\mathbf{c}}_i) = 0$)  or not (i.e. $\phi_j(\hat{\mathbf{c}}_i) = 1$) for the class $y_j$..  
+%This network takes as input  and returns for each class $j \in [1,\dots,l]$ a guess of the relevant concept literal. 
+% In our experiments, we implement the model $\phi_j$ as a multi-layer perceptron with leaky-ReLU activations in the hidden layers and a sigmoid activation on the output layer i.e., $\phi_j(\hat{\mathbf{c}}_i) := \sigma(\text{MLP}_j(\hat{\mathbf{c}}_i))$.
+% (\textbf{step 2}) We then model Equation~\ref{eq:target-literal} by comparing the guessed concept literal $\phi(\hat{\mathbf{c}}_i)$ with the concept truth degree $\hat{c}_{i}$:
+% \todo{we call this an interpretation of the literal}
+% \begin{equation} \label{eq:iff}
+%     l_{ji} = (\phi_j(\hat{\mathbf{c}}_i) \iff \hat{c}_{i})
+% \end{equation}
+% \todo{F: This Eq should be used to align the concept-embeddings to labels or concept-predictions? Who is $\hat{c}_i$ not bold?}
+% This way we obtain a behaviour which models Equation~\ref{eq:target-literal}: (case 1) $l_{ji} \rightarrow \hat{c}_i$ when the guessed literal $\phi_j(\hat{\mathbf{c}}_i)$ is correct and its predicted logic state $\hat{c}_{i}$ is ``truth''; (case 2) $l_{ji} \rightarrow \neg \hat{c}_i$ when the guessed literal $\phi_j(\hat{\mathbf{c}}_i)$ is correct and its predicted logic state $\hat{c}_{i}$ is ``false''; (case 3) $l_{ji} \rightarrow 0$ when the guessed literal is incorrect i.e., it does not match the predicted logic state.
+
+
+% \paragraph{Identifying relevant concepts}
+% The second part of our architecture aims at identifying relevant and irrelevant concepts. To this end we make a feed-forward neural network $\psi_j: \mathbb{R}^k \rightarrow [0,1]$ predict the likelihood of a concept being relevant: This network takes as input any concept embedding $\hat{\mathbf{c}}_i \in \mathbb{R}^k$ and returns for each class $j \in [1,\dots,l]$ a probability of a concept being relevant. In our experiments, we implement the model $\psi_j$ as a multi-layer perceptron with leaky-ReLU activations in the hidden layers. 
+% \paragraph{Conjoin relevant concepts}
+% The final part of our architecture aims at generating a logic rule to make a prediction for a given class using relevant concepts only. To this end, we remove unimportant concepts and then conjoin the literal $l_{ji}$ of the others. One way to remove unimportant concepts is to make their concept literal $l_{ji}$ irrelevant. We can now recall that the structure of our logic rule is a conjunction of terms. As the neutral element of the conjunction is $1$, we can simply set to $1$ all unimportant concepts thus making their presence irrelevant in the conjunction. We can model this behaviour by disjoining concept literals and \textit{irrelevant} scores. We can now safely conjoin all concepts as unimportant ones are now irrelevant to the prediction: 
+% \begin{equation} \label{eq:rule}
+%     \hat{y}_j = \bigwedge_i (l_{ji} \vee \neg r_{ji})
+% \end{equation}
+% This way we obtain a behaviour which models Equation~\ref{eq:target-rule}: (case 1) if a concept is relevant then $r_{ji} \rightarrow 1$ which makes $\neg r_{ji} \rightarrow 0$ which in turn makes the disjunction $(l_{ji} \vee \neg r_{ji}) \rightarrow l_{ji}$; (case 2) if a concept is irrelevant then $r_{ji} \rightarrow 0$ which makes $\neg r_{ji} \rightarrow 1$ which in turn makes the disjunction $(l_{ji} \vee \neg r_{ji}) \rightarrow 1$ making the concept literal irrelevant in the final conjunction.
+
+
+\paragraph{Fuzzy semantics}
+% \paragraph{Neural-Symbolic Semirings}
+\label{sec:semirings}
+To create a semantically valid model, we enforce the same semantic structure in all logic and neural operations. 
+Moreover, to train our model end-to-end, we need this semantics to be differentiable in all its operations, including logic functions. \citet{marra2020lyrics} describe a set of possible t-norm fuzzy logics which can serve the purpose. In our experiments, we use the G\"odel t-norm. With this semantics, we can rewrite Equation~\ref{eq:iff} as:
+\[
+\begin{array}{ll}
+    \ell_{ji} & =\phi_j(\hat{\mathbf{c}}_i)\Leftrightarrow \hat{c}_i =  (\phi_j(\hat{\mathbf{c}}_i)\Rightarrow \hat{c}_i)\wedge (\hat{c}_i\Rightarrow \phi_j(\hat{\mathbf{c}}_i)) = \nonumber\\   
+    &=(\neg\phi_j(\hat{\mathbf{c}}_i)\vee \hat{c}_i)\wedge (\neg \hat{c}_i\vee \phi_j(\hat{\mathbf{c}}_i)) = \nonumber\\   
+    &=\min\{\max\{1-\phi_j(\hat{\mathbf{c}}_i), \hat{c}_{i}\}, \max\{1-\hat{c}_{i},\phi(\hat{\mathbf{c}}_i)\}\}
+\end{array}
+\]
+and Equation~\ref{eq:ruletarget} as: $
+% \begin{equation*}
+    \hat{y}_j = \min_{i=1}^k\{\max\{1 - \psi_j(\hat{\mathbf{c}}_i), \ell_{ji}\}\}
+% \end{equation*}
+$
+
+\subsection{Global and counterfactual explanations}
+\label{sec:ruleadv}
+
+\paragraph{Interpreting global behaviour}
+% Our model builds a simple parameterized fuzzy rule for each sample and it uses this rule to predict the final class. 
+In general, DCR rules may have different weights and concepts for different samples. However, we can still globally interpret the predictions of our model without the need for an external post-hoc explainer. To this end, we collect a batch of (or all) fuzzy rules generated DCR on the training data $\mathcal{X}_{\text{train}}$. Following~\citet{barbiero2022entropy}, we then Booleanize the collected rules and aggregate them with a global disjunction to get a single logic formula valid for all samples of class $j$:
+\begin{equation} \label{eq:global-explanation}
+    \hat{y}^C_j = \bigvee_{\mathbf{x} \in \mathcal{X}_{\text{train}}} \hat{y}_j(\mathbf{x})
+    % \bigwedge_{i \in \{i^\prime \; | \; r_{j i^\prime q} = 1 \} }{\mathbb{I}_{s_{jiq} \geq 0.5}}
+\end{equation}
+This way we obtain a global overview of the decision process of our model for each class.
+
+% \subsection{Causality}
+% \paragraph{Concept Interventions} As is the case for Concept Bottleneck Models~\cite{koh2020concept,zarlenga2022concept}, DCR is receptive to test-time concept interventions where an expert can improve the performance of our model by correcting mispredicted concepts during inference. This can be done by allowing experts to examine the concept probability $\hat{c}_i$ of a specific concept being fed into DCR and manually correcting it by setting it to $\hat{c}_i := 1$ if they believe the concept represented by embedding $\hat{c}_i$ is on or setting it to $\hat{c}_i := 0$ otherwise. This change is then propagated into our DCR module, possibly triggering a change in the prediction made by DCR before such an intervention was performed and increasing its accuracy. These sorts of interventions allow DCR to be able to be deployed in a human-in-the-loop setup where its performance can be drastically improved with the help of experts that can correct mispredicted concept probabilities given to DCR at training time.
+
+
+\paragraph{Counterfactual explanations}
+Logic rules clearly reveal which concepts play a key role in a prediction. This transparency, typical of interpretable models, facilitates the extraction of simple counterfactual explanations without the need for an external algorithm as in~\citet{abid2021meaningfully}. 
+In DCR we extract simple counter-examples $x^\star$ using the logic rule as guidance. Following~\citet{wachter2017counterfactual}, we generate counter-examples as close as possible to the original sample $|x - x^\star|< \epsilon$. In particular, \citet{wachter2017counterfactual} proposes to perturb the input features of a model starting from the most relevant features. As the decision process depends mostly on the most relevant features, perturbing a small set of features is usually enough to find counter-examples. To this end, we first rank the concepts present in the rule according to their relevance scores. Then, starting from the most relevant concept, we invert their truth value until the prediction of the model changes. The new rule represents a counterfactual explanation for the original prediction.
+
+% Our model makes local inferences by learning a simple logic rule. This logic rule can be seen as a hypothetical causal graph linking concepts to tasks. We can then play directly with this causal graph to intervene on concepts and/or on rule weights. Each modification of the rule is necessary and sufficient to obtain a specific prediction (as opposed to a black-box predictor). 
+% This allows us to generate counterfactuals by design (causality level-3 according to Pearl\todo{Missing citation?}). 
+% In Figure \ref{fig:counterfactual_trig}, we test the capability of providing counterfactual explanations. Counter-examples $x^\star$ are crafted following the provided explanation, while remaining . 
+
+
+% \paragraph{Rule Interventions}
+% As LENs may infer incorrect rules from data, human experts can intervene on the structure of the rules, deleting or adding new terms to the rule to align with their expectations.
+
+% \paragraph{Prior Knowledge Injection}
+% We just need to compile prior knowledge in form of logic rules and add those rules to the set of rules learnt from LENs.
+
+
+\section{Experiments}
+\label{sec:exp}
+
+\subsection{Research Questions}
+In this section, we analyze the following research questions:
+\begin{itemize}
+    \item \textbf{Generalization ---} How does DCR generalize on unseen samples compared to interpretable and neural-symbolic models? How does DCR generalize when concepts are unsupervised?
+    \item \textbf{Interpretability ---} Can DCR discover meaningful rules? Can DCR re-discover ground-truth rules? How stable are DCR rules under small perturbations of the input compared to interpretable models and local post-hoc explainers?
+    % \item \textbf{Causality ---} 
+    % Are concept interventions effective on DCR? 
+    How long does it take to extract a counterfactual explanation from DCR compared to a non-interpretable model?
+\end{itemize}
+% Moreover, we are specifically interested in evaluating DCR with respect to state-of-the-art interpretable and black-box models in real-world extreme settings where concept supervisions are not available for training or some of the training concepts are not available at test time.
+
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.98\linewidth]{figs/results_auc.pdf}
+    \caption{Mean ROC AUC for task predictions for all baselines across all tasks (the higher the better). DCR often outperforms interpretable concept-based models. \emph{CE} stands for concept embeddings, while \emph{CT} for concept truth degrees. Models trained on concept embeddings are not interpretable as concept embeddings lack a clear semantic for individual embedding dimensions.
+    % We report the mean and $95\%$ CI of the task's ROC AUC.
+    %\todo{Change to Concept Embedding+X and Concept Scores+X because we don't always use CEM or CBM}
+    }
+    \label{fig:accuracy}
+\end{figure*}
+
+
+\subsection{Experimental Setup}
+\paragraph{Data \& task setup}
+We investigate our research questions using six datasets spanning three of the most common data types used in deep learning: tabular, image, and graph-structured data.
+We use the three benchmark datasets (\textit{XOR}, \textit{Trigonometry}, and \textit{Dot}) proposed by~\citet{zarlenga2022concept} as they capture increasingly complex concept-to-label relationships, therefore challenging concept-based models. To test the DCR's ability to re-discover ground-truth rules we use the \textit{MNIST-Addition} dataset~\cite{manhaeve2018deepproblog}, a standard benchmark for neural-symbolic systems where one aims to predict the sum of two digits from the MNIST's dataset. 
+% To further increase the complexity of this task, we train DCR end-to-end with a convolutional network without supervising concepts corresponding to digits. 
+Furthermore, we evaluate our methods on two real-world benchmark datasets: the Large-scale CelebFaces Attributes (\emph{CelebA},~\citep{liu2015deep}) and the \emph{Mutagenicity}~\cite{morris2020tudataset} dataset. In particular we define a new \emph{CelebA} task to simulate a real-world condition of concept ``shifts'' where train and test concepts are correlated (e.g., ``beard'' and ``mustaches'') but do not match exactly. To this end, we split the set of \emph{CelebA} attributes defined by~\citet{zarlenga2022concept} in two partially disjoint sets and use one set of attributes for training models and one for testing.
+Finally, we use \emph{Mutagenicity} as a real-world scenario the concept encoder is unsupervised.
+As \emph{Mutagenicity} does not have concept annotations, we first train a graph neural network (GNN) on this dataset, and then we use the Graph Concept Explainer (GCExplainer, ~\cite{magister2021gcexplainer}) to extract a set of concepts from the embeddings of the trained GNN.
+For dataset with concept labels instead, we generate concept embeddings and truth degrees by training a Concept Embedding Model~\cite{zarlenga2022concept}.
+% We then train DCR on the discovered concepts and evaluate the correctness of a DCR rule indirectly by checking whether rules use concepts corresponding to functional groups known for their harmful effects.
+Further details on these datasets and their properties are provided in Appendix~\ref{app:datasets}.
+
+
+\paragraph{Baselines}
+We compare DCR against interpretable models, such as logistic regression~\cite{verhulst1845resherches}, decision trees~\citep{breiman2017classification}, as well as state-of-the-art black-box classifiers, such as extreme gradient boosting (\mbox{XGBoost})~\citep{chen2016xgboost}, and locally-interpretable neural models, such as the Relu Net \citep{ciravegna2023logic}. 
+% The latter is a deep neural network-based model, providing logic explanations of its prediction. 
+We train all baseline models in two different conditions mapping concepts to tasks either using concept truth degrees or using concept embeddings (baselines marked with \emph{CT} and \emph{CE} in figures, respecitvely). We consider interpretable only baselines trained on concept truth degrees only, as concept embeddings lack of clear semantics assigned to each dimension. However, baselines trained on concept embeddings still provide a strong reference for task accuracy w.r.t. interpretable models.
+% \mbox{(1)} extracted concept embeddings (i.e., embeddings learnt by CEMs~\cite{zarlenga2022concept}) to the output label, and \mbox{(2) by} training each model to map concept truth degrees to the task's output label. 
+% We remark that because specific dimensions of a concept embedding lack known semantics, decision trees trained on these embedding will not be fully interpretable.
+On the \emph{MNIST-Addition} dataset we compare DCR with state-of-the-art neural-symbolic baselines including: DeepProbLog \cite{manhaeve2018deepproblog}, DeepStochLog \cite{winters2022deepstochlog}, Logic Tensor Networks \cite{badreddine2022logic}, and Embed2Sym \cite{aspis2022embed2sym}. This is possible as the \emph{MNIST-Addition} dataset provides access to the full set of ground-truth rules, allowing us to train these neural-symbolic systems.
+% When evaluating concept interventions, we compare DCR against Concept Bottleneck Models (CBMs)~\cite{koh2020concept} with sigmoidal bottlenecks and against Concept Embedding Models (CEMs)~\cite{zarlenga2022concept}.
+Finally, we compare DCR interpretability with interpretable models, such as logistic regression and decision trees, and with local post-hoc explainers, such as the Local Interpretable Model-agnostic Explanations (LIME,~\cite{ribeiro2016should}) applied on XGBoost. 
+% Finally, following~\cite{wachter2017counterfactual}, we compare counterfactual examples extracted from DCR counterfactuals extracted from interpretable models and with LIME applied on XGBoost.
+% \todo{x sensitivity and counterfactuals ADD: We compared with the interpretable methods used in Figure \ref{fig:accuracy} with the addition of XGBoost when explained by LIME ('Lime') \citep{ribeiro2016should} and a recently proposed interpretable neural network ('XReluNN') \citep{ciravegna2023logic}.}
+
+
+% As some of these models are not easily differentiable (e.g., decision trees), end-to-end training might be unfeasible or more difficult w.r.t.\ DCR. To avoid this bias, we train all models using a sequential training~\citep{koh2020concept} using exactly the same input. As a further comparison, we train each baseline model once on concept embeddings and once on concept truth degrees only. 
+% The first experimental condition allows us to compare the generalisation of different models when they have access to the same amount of information. However, in this setting, all models but DCR are black-boxes as their inference depend on the embeddings. For example, a decision tree could learn the formula ``male $\leftarrow$ bald$>0.5$ $\wedge$ $e_{[\text{long-hair},3]}<32.1$'' where $e_{[\text{long-hair},3]}$ is the third dimension of the embedding of concept ``long-hair''. This will never happen with DCR as it uses concept embeddings to compute attention scores only. For this reason, we also train all baselines on concept truth degrees only as in this scenario we can consider them as white boxes. We consider XGBoost as a black-box despite being a tree-based classifier its inference for a single sample is a highly non-linear function of the input.
+
+
+
+% % Please add the following required packages to your document preamble:
+% % \usepackage{graphicx}
+% \begin{table*}[!t]
+% \centering
+% \caption{Here we need a table showing examples of how our model makes predictions. Our model generates for each sample a weighted fuzzy rule whose literals are concepts. So, for each sample our model is interpretable and does not require to any explanation.}
+% \label{tab:global-rules}
+% \resizebox{\textwidth}{!}{%
+% \begin{tabular}{lllll}
+% \toprule
+%  &
+% \multicolumn{1}{l}{\textbf{\textsc{XOR}}} & 
+% \multicolumn{1}{l}{\textbf{\textsc{Trigonometry}}} & 
+% % \multicolumn{1}{l}{\textbf{\textsc{Vector}}} & 
+% \multicolumn{1}{l}{\textbf{\textsc{BAGraph}}} & 
+% \multicolumn{1}{l}{\textbf{\textsc{MNIST addition}}} \\ 
+% \midrule
+% Ground-truth rule & 
+% $y_1 \leftarrow \neg c_0 \wedge c_1$ & 
+% $y_1 \leftarrow \neg c_0 \wedge \neg c_1 \wedge \neg c_2$ & 
+% % $y_0 \leftarrow c_0 \wedge c_1$ & 
+% & $y_{13} \leftarrow c^{first}_9 \land  c^{second}_4$\\
+% Example of DCR rule & 
+% $y_1 \leftarrow 1.0_{\neg c_0} \wedge 1.0_{c_1}$ & 
+% $y_1 \leftarrow 1.0_{\neg c_0} \wedge 1.0_{\neg c_1} \wedge 1.0_{\neg c_2}$ & 
+% % $y_0 \leftarrow 1.0_{c_0} \wedge 1.0_{c_1}$ & 
+% & $y_{13} \leftarrow 1.0_{c^{first}_9} \land  1.0_{c^{second}_4}$\\
+% \bottomrule
+% \end{tabular}%
+% }
+% \end{table*}
+% \begin{figure*}[t]
+%     \centering
+%     \todo{}
+%     % \includegraphics[width=0.24\linewidth]{figs/explanations/id_0_explanation.png}
+%     % \includegraphics[width=0.24\linewidth]{figs/explanations/id_69_explanation.png}
+%     % \includegraphics[width=0.24\linewidth]{figs/explanations/id_144_explanation.png}
+%     % \includegraphics[width=0.24\linewidth]{figs/explanations/id_18_explanation.png}
+%     \caption{Here we need an image showing examples of how our model makes predictions. Our model generates for each sample a weighted fuzzy rule whose literals are concepts. So, for each sample our model is interpretable and does not require to any explanation.}
+%     \label{fig:exact_explanations}
+% \end{figure*}
+
+
+\paragraph{Evaluation}
+We assess each model's performance and interpretability based on four criteria. First, we measure task generalization using the Area Under the Receiver Operating Characteristic Curve (ROC AUC) from prediction scores~\cite{hand2001simple} (the higher the better).
+% We only consider task generalization as we evaluate all methods on the same concept representations, thus ruling out this confounding factor in our comparison. 
+Second, we evaluate DCR interpretability by comparing the learnt logic formulae with ground-truth rules in \emph{XOR}, \emph{Trigonometry}, and \emph{MNIST-Addition} datasets, and indirectly on \emph{Mutagenicity} by checking whether the learnt rules involve concepts corresponding to functional groups known for their harmful effects, as done by~\citet{ying2019gnnexplainer}. Third, to further assess interpretability, we measure 
+% the effect of concept interventions on task performance~\cite{koh2020concept} (the higher the better) and
+the sensitivity of the predictions under small perturbations following~\citet{yeh2019fidelity} (the lower the better). Finally, we measure how receptive our model is to extracting meaningful counterfactual examples from its rules by computing the number of concept perturbations required to obtain a counterfactual example following~\citet{wachter2017counterfactual} (the lower the better).
+For each metric, %unless otherwise specified, 
+we report their mean and 95\% Confidence Intervals (CI) on our test sets using $5$ different initialization seeds.
+% To evaluate counterfactual explanations, we compare how many perturbations are necessary to make DCR change its prediction w.r.t.\ interpretable models and LIME applied on XGBoost.
+% \todo{add for counterfactuals: We compute the reduction of confidence of the originally predicted class on the counter-example $f_(x^\star)$ as a function of the number of modified features.}
+
+\subsection{Task Generalisation}
+\paragraph{DCR outperforms interpretable models (Figure~\ref{fig:accuracy})} 
+Our experiments show that DCR generalizes significantly better than interpretable benchmarks in our most challenging datasets. This improvement peaks when concept embeddings hold more information than concept truth degrees, as in  the \emph{CelebA} and \emph{Dot} tasks where this deficit of information is imposed byconstruction~\cite{zarlenga2022concept}. This grants DCR a significant advantage (up to $\sim 25\%$ improvement in ROC-AUC) over the other interpretable baselines. This phenomenon confirms the findings by~\citet{mahinpei2021promises} and~\citet{zarlenga2023towards}. In particular, the concept shift in \emph{CelebA} causes interpretable models to behave almost randomly as the set of test concept is different from the set of train concepts (despite being correlated). DCR however still generalizes well as the mechanism generating rules only depends on concept embeddings and the embeddings hold more information on the correlation between train and test concepts w.r.t. concept truth degrees.
+% because concept embeddings may hold relevant information to solve unrelated tasks. 
+To further test this hypothesis, we compare DCR against XGBoost, decision trees (DTs), and logistic regression trained on concept embeddings. In most cases, concept embeddings allow DTs and logistic regression to improve task generalization, but the predictions of such models are no longer interpretable. In fact, even a logic rule whose terms correspond to dimensions of a concept embedding is not semantically meaningful as discussed in Section~\ref{sec:back}. In contrast, DCR uses concept embeddings to assemble rules whose terms are concept truth degrees, which makes it possible to keep the rules semantically meaningful.
+% Neural-Symbolic Concept Reasoning outperforms even state-of-the-art classifiers such as XGBoost in out-of-distribution tasks where the number of concepts available at train and test time are different (up to $+25\%$ test AUC on CelebA). DCR achieves this as the model does not depend on the number of concepts used at training time, as opposed to some of the most common machine learning classifiers. This allows DCR to work in environments where the number of concepts is different without retraining.
+
+\paragraph{DCR matches the accuracy of neural-symbolic systems trained using human rules (Table~\ref{tab:mnist-addition-accuracy})}
+% Neural-symbolic systems using human rules represent the gold standard to benchmark rule learners.
+Our experiments show that DCR generates rules that, when applied, obtain accuracy levels close to neural-symbolic systems trained using human rules, currently representing the gold-standard to benchmark rule learners.
+% Our experiments show that DCR induces rules almost as accurate as neural-symbolic systems using human rules. 
+We show this result on the \emph{MNIST-Addition} dataset~\cite{manhaeve2018deepproblog}, a standard benchmark in neural-symbolic AI, where the labels on the concepts are not available. We learn concepts without supervision by adding another task classifier, which only uses very crisp $\hat{c}_i$ to make the task predictions (see Appendix \ref{app:mnist}). 
+DCR achieves similar performance to state-of-the-art neural-symbolic baselines (within $1\%$ accuracy from the best baseline). However, DCR is the only system discovering logic rules directly from data, while all the other baselines are trained using ground-truth rules. Therefore, this experiment indicates how DCR can learn meaningful rules also without concepts supervision while still maintaining state-of-the-art performance.
+% In fact, we observe that if we increase the complexity of the task even further, by not providing any concept supervision during training time to DCR, our model is still able to learn meaningful rules in an unsupervised manner.
+% Please add the following required packages to your document preamble:
+% \usepackage{graphicx}
+\begin{table}[]
+\centering
+\caption{Task accuracy on the \emph{MNIST-addition} dataset. The neural-symbolic baselines use the knowledge of the symbolic task %(i.e., the addition) 
+to distantly supervise the image recognition task. DCR achieves similar performances even though it learns the rules from scratch.}
+\label{tab:mnist-addition-accuracy}
+\resizebox{0.7\columnwidth}{!}{%
+\begin{tabular}{ll}
+\hline
+\textbf{\textbf{\textsc{Model}}} & \textbf{\textbf{\textsc{Accuracy} (\%)}} \\ \hline
+\multicolumn{2}{c}{With ground truth rules} \\
+DeepProbLog & $97.2 \pm 0.5$ \\
+DeepStochLog & $97.9 \pm 0.1$ \\
+Embed2Sym & $97.7 \pm 0.1$ \\
+LTN & $98.0 \pm 0.1$ \\ \hline
+\multicolumn{2}{c}{Without ground truth rules} \\
+DCR(ours) & $97.4 \pm 0.2$ \\ \hline
+\end{tabular}%
+}
+\end{table}
+% with an unsupervised criterion to learn meaningful concepts distributions. In this paper, we used a simple solution, where tasks are predicted from a peaked distributions on the concepts obtained through a Gumbel softmax. 
+% Neural-Symbolic Concept Reasoning attains high prediction performances and logic rules even when concept labels are not available at training time. \todo{discuss experiments on MNIST addition (relational) and graph classification}
+% In particular, in absence of supervisions on the concepts, we can couple DCR with an unsupervised criterion to learn meaningful concepts distributions. In this paper, we used a simple solution, where tasks are predicted from a peaked distributions on the concepts obtained through a Gumbel softmax. 
+% DCR achieves similar performance to state-of-the-art Neural Symbolic frameworks, despite being the only system without access to the underling symbolic rules.  On the contrary, DCR induces them automatically from data.  
+% \todo{move the following to experimental set up}
+% We show the results of our experiments on the MNIST Addition task \cite{manhaeve2018deepproblog} in Table \ref{tab:mnist-addition}, where we compare  DCR with the following Neural-Symbolic baselines: DeepProbLog \cite{manhaeve2018deepproblog}, DeepStochLog \cite{winters2022deepstochlog}, Logic Tensor Networks \cite{badreddine2022logic} and Embed2Sym \cite{aspis2022embed2sym}. 
+% \begin{table}[t]
+%     \centering
+%     \label{tab:mnist-addition-accuracy}
+%     \caption{Task accuracy on the \emph{MNIST-addition} dataset. The neural-symbolic baselines use the knowledge of the symbolic task (i.e., the addition) to distantly supervise the image recognition task. DCR achieves similar performances even though it has to learn the rules from scratch.}
+%     % \vspace{0.2cm}
+%     \begin{tabular}{ll}
+%         \hline
+%         \textbf{\textsc{Model}} & \textbf{\textsc{Accuracy} (\%)} \\
+%         \hline
+%         \multicolumn{2}{c}{\textit{With ground truth rules}} \\
+%         DeepProbLog & $97.2 \pm 0.5$ \\
+%         DeepStochLog & $97.9 \pm 0.1$ \\
+%         Embed2Sym & $97.7 \pm 0.1$ \\
+%         LTN  & $98.0 \pm 0.1$ \\
+%         \hline
+%         \multicolumn{2}{c}{\textit{Without ground truth rules}} \\
+%         DCR(ours) & $97.4 \pm 0.2$ \\
+%         \hline
+%     \end{tabular}
+% \end{table}
+% \begin{table*}[]
+%     \centering
+%     \caption{Mean accuracy ($\pm$ standard deviation) on the MNIST addition dataset. The neural-symbolic baselines use the knowledge of the symbolic task (i.e. the addition) to distantly supervise the image recognition task. DCR achieves similar performances even though it has to learn the rules during the process.}
+%     \label{tab:mnist-addition}
+%     \begin{tabular}{l|llll|l}
+%         \hline
+%         & \multicolumn{4}{c}{\textit{With symbolic rules}} &
+%         {\textit{Without symbolic rules}} \\
+%         \textbf{\textsc{Model}} & DeepProbLog & DeepStochLog & Embed2Sym & LTN & DCR(ours) \\
+%         \hline
+%          \textbf{\textsc{Accuracy}} & $0.972 \pm 0.005$ & $0.979 \pm 0.001$ & $0.977 \pm 0.001$ & $0.980 \pm 0.001$ & $0.971 \pm 0.002$
+%     \end{tabular}
+%     \label{tab:my_label}
+% \end{table*}
+\subsection{Interpretability}
+\paragraph{DCR discovers semantically meaningful logic rules (Table~\ref{tab:global-rules})}
+Our experiments show that DCR induces logic rules that are both accurate in predicting the task and formally correct when compared to ground-truth logic rules. We evaluate the formal correctness of DCR rules on the \emph{XOR}, \emph{Trigonometry}, and \emph{MNIST-Addition} datasets where we have access to ground-truth logic rules. We report a selection of Booleanized DCR rules with the corresponding ground truth rules in Table~\ref{tab:global-rules}. 
+Our results indicate that DCR's rules align with human-designed ground truth rules, making them highly interpretable. For instance, DCR predicts that the sum of two MNIST digits is $17$ if either the first image is a \includegraphics[scale=0.4]{figs/img_9.jpg} (i.e., $c'_9$) and the second is an \includegraphics[scale=0.4]{figs/img_8.jpg} (i.e., $c''_8$) or vice-versa which we can interpret globally using Equation~\ref{eq:global-explanation} as: $y_{17} \Leftrightarrow (c'_9 \land  c''_8) \vee (c'_8 \land  c''_9)$. We list all logic rules discovered by DCR on the \emph{MNIST-Addition} dataset in Appendix~\ref{app:mnist}.
+It is interesting to investigate the potential of DCR also in settings where we do not have access to the ground-truth logic rules, such as the \emph{Mutagenicity} dataset. Here, unlike the \textit{MNIST addition} dataset, not only
+there is no supervision on the concepts, but we don't even know which are the concepts.
+We use GCExplainer~\cite{magister2021gcexplainer} to generate a set of concepts embeddings from the embeddings of a trained GNN. We then use these embeddings to train DCR.
+% To test this, we use GCExplainer's concepts extracted from the embeddings of a GNN trained on the \emph{Mutagenicity} dataset to train a DCR model on the same task.
+% following a similar procedure~\citet{ghorbani2019interpretation} proposed for convolutional neural networks.
+In this setting, we can only evaluate the correctness of a DCR rules indirectly by checking whether the concepts appearing in the rules correspond to functional groups known for their harmful effects within the \emph{Mutagenicity} dataset following~\citet{ying2019gnnexplainer}. Interestingly, many of DCR's rules predicting mutagenic effects include functional groups such as phenols~\cite{hattenschwiler2000role} and dimethylamines~\cite{acgih2016american}, which can be highly toxic when combined in molecules such as \mbox{3-Dimethylaminophenols}~\cite{sabry2011synthesis}. This suggests that DCR has potential to unveil semantically meaningful relations among concepts and to make them explicit to humans by means of the learnt rules. 
+%The experiments on \emph{Mnist-Addition} and \emph{Mutagenicity} also demonstrate how DCR can make these relations explicit and semantically meaningful even when concepts are unknown during training. 
+We provide experimental details with the full list of concepts and rules discovered in \emph{Mutagenicity} in Appendix~\ref{app:mutag}.
+% Indeed, DCR predicts each sample using a weighted fuzzy rule whose literals are the learnt concepts. 
+ % As in other interpretable models, such as logistic regression and decision trees, DCR infers the prediction using an interpretable model which makes the use of local explainers such as LIME~\cite{ribeiro2016should} superfluous/obsolete.
+% \paragraph{DCR global behavior is self-explainable (Table~\ref{tab:global-rules})}
+% Our experiments show that the global behaviour of DCR is self-explainable. Indeed, The global behaviour of DCR is coherent and matches the ground-truth expected behaviour as shown in Figure~\ref{tab:global-explanations}. Here similar local logic expressions are aggregated to provide a global overview of DCR reasoning which matches ground-truth expressions.
+
+
+% Please add the following required packages to your document preamble:
+% \usepackage{graphicx}
+\begin{table}[!t]
+\centering
+\caption{Error rate of Booleanised DCR rules w.r.t.\ ground truth rules. Error rate represents how often the label predicted by a Booleanised rule differs from the fuzzy rule generated by our model. The error rate is reported with the mean and standard error of the mean. A full list of logic rules for MNIST is in Appendix~\ref{app:mnist}.}
+% \medskip
+\label{tab:global-rules}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lll}
+\hline
+\multicolumn{1}{l}{\textbf{\textsc{Ground-truth Rule}}} & \multicolumn{1}{l}{\textbf{\textsc{Predicted Rule}}} & \multicolumn{1}{l}{\textbf{\textsc{Error (\%)}}} \\ 
+\hline
+\multicolumn{3}{c}{\textbf{XOR}} \\
+$y_0 \leftarrow \neg c_0 \wedge \neg c_1$ & $y_0 \leftarrow \neg c_0 \wedge \neg c_1$ & $0.00 \pm 0.00$ \\
+$y_0 \leftarrow c_0 \wedge c_1$ & $y_0 \leftarrow c_0 \wedge c_1$ & $0.00 \pm 0.00$ \\
+$y_1 \leftarrow \neg c_0 \wedge c_1$ & $y_1 \leftarrow \neg c_0 \wedge c_1$ & $0.02 \pm 0.02$ \\
+$y_1 \leftarrow c_0 \wedge \neg c_1$ & $y_1 \leftarrow c_0 \wedge \neg c_1$ & $0.01 \pm 0.01$ \\
+\multicolumn{3}{c}{\textbf{Trigonometry}} \\
+$y_0 \leftarrow \neg c_0 \wedge \neg c_1 \wedge \neg c_2$ & $y_0 \leftarrow \neg c_0 \wedge \neg c_1 \wedge \neg c_2$ & $0.00 \pm 0.00$ \\
+$y_1 \leftarrow c_0 \wedge c_1 \wedge c_2$ & $y_1 \leftarrow c_0 \wedge c_1 \wedge c_2$ & $0.00 \pm 0.00$ \\ 
+\multicolumn{3}{c}{\textbf{MNIST-Addition}} \\
+$y_{18} \leftarrow c'_9 \land  c''_9$ & $y_{18} \leftarrow c'_9 \land  c''_9$ & $0.00 \pm 0.00$ \\
+$y_{17} \leftarrow c'_9 \land  c''_8$ & $y_{17} \leftarrow c'_9 \land  c''_8$ & $0.00 \pm 0.00$ \\
+$y_{17} \leftarrow c'_8 \land  c''_9$ & $y_{17} \leftarrow c'_8 \land  c''_9$ & $0.00 \pm 0.00$ \\
+\hline
+\end{tabular}%
+}
+\end{table}
+
+\paragraph{
+DCR rules are stable under small perturbations (Figure~\ref{fig:sensitivity})}
+An important characteristic of local explanations is to be stable under small perturbations \citep{yeh2019fidelity}. Indeed, users do not trust explanations if they change significantly on very similar inputs for which the model make the same prediction. This metric, also known as explanation sensitivity, is generally computed as the maximum change in the explanation of a model $\Phi(f)$ on a slightly perturbed input ($x^{\star}$), that is, $|\Phi(f(\mathbf{x}^\star)) - \Phi(f(\mathbf{x}))|,  |\mathbf{x}-\mathbf{x}^\star|_\infty< \epsilon$. We compare the DCR explanations w.r.t. our interpretable baselines as well as w.r.t. LIME~\cite{ribeiro2016should} explaining the output of XGBoost. Since we are using different types of models, we use a normalised version of the sensitivity $ |\Phi(f(\mathbf{x}^\star)) - \Phi(f(\mathbf{x}))| / |\Phi(f(\mathbf{x}))|$. 
+% Both the norm and the distance between any two explanations are computed by taking into consideration the feature importance vector that is provided to locally explain the model. 
+We compute the distance between two explanations considering the feature importance of the original explanation w.r.t. to the feature importance of the explanation for the perturbed example. For decision tree's rules we consider distance between original path and the path of the perturbed example. 
+% For a decision tree's Boolean explanations, we take into consideration the presence and the sign of the Boolean atom associated with each feature. 
+As highlighted in Figure \ref{fig:sensitivity}, in all datasets the explanations provided by DCR are very stable, particularly w.r.t. LIME and ReluNet. Notice that the figure does not report the explanation sensitivity of logistic regression and decision tree because it is trivially zero as they learn fixed rules for the entire dataset. The area under the sensitivity curves of all methods together with further details concerning this experiment has been reported in Appendix~\ref{app:sensitivity}.
+%In contrast, and as one may expect, the explanation sensitivity of logistic regression and decision trees is zero as these models learn fixed rules for the entire dataset. For this reason, their explanation sensitivities have been only reported in Table~\ref{tab:exp_sensitivity} in Appendix~\ref{app:sensitivity}.  
+
+% % \subsection{Causality}
+% \paragraph{DCR supports effective human interventions (Figure~\ref{fig:interventions})}
+% As discussed in Section~\ref{sec:DCR}, DCR was designed to enable human concept interventions in its predicted explanations that enable users to improve the model's performance when deployed in a human-in-the-loop setup. We test their receptiveness to expert interventions by intervening on a randomly selected subset of concepts across all concept-annotated datasets as we vary the size of the set of intervened concepts. Our results, shown in Figure~\ref{fig:interventions}, show that DCR is highly receptive to test-time concept interventions, with a high increase in performance as the number of test-time intervened concepts increases. Furthermore, we observe that DCR's performance is competitive against that observed in competing models such as CBMs and CEMs. Although we observe that DCR's performance tends to be below that of CEM, our model is capable of enabling a deeper level of human inspection and interpretability by offering experts the possibility of inspecting a set of rules from which they can infer novel knowledge in the task of interest. Both of these properties, that is DCR's positive reaction to interventions and its ability to allow expert inspection of its learnt rules, enable our method to be a good candidate for practical applications in which an expert needs to certify, evaluate, or interact with the model's explanations for its predictions.
+
+% \begin{figure}[h!]
+%     \centering
+%     % \includegraphics[width=0.75\columnwidth]{figs/interventions/intervention_results.pdf}
+%     \todo{to add}
+%     \caption{Task ROC-AUC (y-axis) as a function of the number of concepts intervened on at test-time for the XOR, Trig, Dot, and CelebA datasets. For each method, we show the mean AUC values computer across 3 randomly selected groups of concepts to intervene for 5 models trained with different initialization seeds. Their respective standard errors are therefore shown in the shaded areas. \todo{MATEO to add plot here once all experiments have been completed.}}
+%     \label{fig:interventions}
+% \end{figure}
+% More precise
+
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[trim=0 0 0 0, clip, width=0.9\columnwidth]{figs/counterfactual/results_sensitivity.pdf}
+    \caption{Sensitivity of model explanation when changing the radius of the input perturbation. The lower, the better. DCR explanations engender trust as they are stable under small perturbations of the input. The same does not hold generally for LIME explanations of XGBoost or Relu Net decision rules.}
+    \label{fig:sensitivity}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=.965\columnwidth]{figs/counterfactual/results_counterfactuals.pdf}
+    \caption{Model confidence as a function of the number of perturbed features on counterfactual examples. The lower, the better. Similarly to interpretable methods, DCR prediction confidence quickly drops after inverting the truth degree of a small set of relevant concepts, facilitating the discovery of counterfactual examples. }
+    \label{fig:counterfactuals}
+\end{figure}
+
+% \begin{table}[t]
+%     \caption{AUC of the explanation sensitivity curves when increasing the perturbation radius $\epsilon$. The lower, the better. }
+%     \label{tab:exp_sensitivity}
+%     \centering
+%     \resizebox{\columnwidth}{!}{
+%     \begin{tabular}{llllll}
+%     \toprule
+%     Model &                        XOR &                       Trig &                        Vec &                      Mutag &                     CelebA \\
+%     \midrule
+%     DT              &\bf0.000{\tiny $\pm 0.000$ } &\bf0.000{\tiny $\pm 0.000$ } &\bf0.000{\tiny $\pm 0.000$ } &\bf0.000{\tiny $\pm 0.000$ } &\bf0.000{\tiny $\pm 0.000$ } \\
+%     LR              &\bf0.000{\tiny $\pm 0.000$ } &\bf0.000{\tiny $\pm 0.000$ } &\bf0.000{\tiny $\pm 0.000$ } &\bf0.000{\tiny $\pm 0.000$ } &\bf0.000{\tiny $\pm 0.000$ } \\
+%     ReluNet          &   0.939{\tiny $\pm 1.301$ } &   0.110{\tiny $\pm 0.181$ } &   0.148{\tiny $\pm 0.247$ } &   0.995{\tiny $\pm 1.480$ } &   0.106{\tiny $\pm 0.169$ } \\
+%     LIME            &   0.984{\tiny $\pm 0.885$ } &   0.013{\tiny $\pm 0.009$ } &   0.592{\tiny $\pm 0.534$ } &   1.900{\tiny $\pm 0.969$ } &       nan{\tiny $\pm nan$ } \\
+%     DCR             &\bf0.000{\tiny $\pm 0.000$ } &\bf0.000{\tiny $\pm 0.000$ } &   0.165{\tiny $\pm 0.614$ } &\bf0.000{\tiny $\pm 0.000$ } &   1.292{\tiny $\pm 1.652$ } \\
+%     \bottomrule
+%     \end{tabular}
+%     }
+% \end{table}
+
+\paragraph{DCR enables discovering counterfactual examples (Figure~\ref{fig:counterfactuals})}
+Besides being stable, DCR rules can be used to find simple counterfactual examples, as introduced in Section~\ref{sec:ruleadv}. In Figure~\ref{fig:counterfactuals} we show a model's confidence in its predictions as we increase the number of concept perturbations. In making perturbations, we sort concepts from the most relevant to the least using DCR rules, as suggested by~\citet{wachter2017counterfactual}. 
+Our results show that DCR confidence in its predictions drops quickly when we perturb the most relevant concepts according to a given rule. 
+% perturb the input sample according to DCR explanation, 
+This enables us to discover counterfactual examples where the concept literals are very similar to the original one rule. 
+%As it can be seen  in most cases inverting the truth values of the 2 most relevant concepts is enough to cause a significant drop in DCR's confidence in the predicted class. 
+This behaviour is emblematic of interpretable models such as decision trees and logistic regression, for which similar conclusions can be drawn. 
+% This property of DCR is emphasized in datasets where concepts truth are crisp and stable. 
+We also observe how in \emph{Mutagenicity} DCR confidence is a bit higher than interpretable baselines. We can explain this behavior as for this challenging dataset DCR rules give equal relevance to a larger set of concepts. Still DCR confidence is much lower than a black box such as XGBoost.
+%In fact, black boxes such as XGBoost typically generate highly non-linear combinations of concepts. %These non-linearities make the effect of a simple truth degree inversion highly unpredictable as shown in Figure~\ref{tab:counterfactuals}. 
+% In contrast, naively inverting the truth degree of some concepts in 
+% as in black boxes input perturbations lead to an unpredictable effect on the model's prediction, hindering the search for a counterfactual example. 
+Local explainers such as LIME can only partially explain the decision process of black box models such as XGBoost: LIME areas under the model confidence curve are generally higher than the other methods. The actual values for all methods are reported in Table \ref{tab:counterfactuals} in Appendix~\ref{app:counterfactual} together with further details and counterfactual examples.
+
+% \begin{table}
+% \caption{AUC of the model confidence against counterfactual explanations when increasing the number of perturbed features. The lower, the better.}
+% \resizebox{\columnwidth}{!}{
+%     \begin{tabular}{lrrrrr}
+%     \toprule
+%     Model &       XOR &      Trig &       Vec &     Mutag &    CelebA \\
+%     \midrule
+%     DT          &\bf0.339{\tiny $\pm 0.468$ } &\bf0.395{\tiny $\pm 0.380$ } &\bf0.443{\tiny $\pm 0.442$ } &\bf0.185{\tiny $\pm 0.311$ } &\bf0.333{\tiny $\pm 0.471$ } \\
+%     LR          &   0.992{\tiny $\pm 0.015$ } &   0.451{\tiny $\pm 0.402$ } &   0.530{\tiny $\pm 0.391$ } &   0.347{\tiny $\pm 0.351$ } &\bf0.334{\tiny $\pm 0.471$ } \\
+%     ReluNet      &   0.622{\tiny $\pm 0.476$ } &   0.469{\tiny $\pm 0.429$ } &   0.448{\tiny $\pm 0.457$ } &\bf0.279{\tiny $\pm 0.387$ } &   0.338{\tiny $\pm 0.468$ } \\
+%     LIME        &   0.674{\tiny $\pm 0.462$ } &   0.424{\tiny $\pm 0.422$ } &   0.450{\tiny $\pm 0.438$ } &   0.249{\tiny $\pm 0.372$ } &   0.667{\tiny $\pm 0.471$ } \\
+%     XGBoost     &   0.680{\tiny $\pm 0.460$ } &   0.739{\tiny $\pm 0.431$ } &   0.804{\tiny $\pm 0.426$ } &   0.924{\tiny $\pm 0.226$ } &   1.000{\tiny $\pm 0.000$ } \\
+%     DCR         &\bf0.344{\tiny $\pm 0.505$ } &\bf0.255{\tiny $\pm 0.436$ } &\bf0.394{\tiny $\pm 0.489$ } &   0.705{\tiny $\pm 0.467$ } &   0.754{\tiny $\pm 0.447$ } \\
+%     \bottomrule
+%     \end{tabular}
+% }
+% \end{table}
+% Only decision trees provide similar performances, with the other methods requiring to modify 2–3 features to reach the same confidence level.
+
+% Our model makes local inferences by learning a simple logic rule. This logic rule can be seen as a hypothetical causal graph linking concepts to tasks. We can then play directly with this causal graph to intervene on concepts and/or on rule weights. Each modification of the rule is necessary and sufficient to obtain a specific prediction (as opposed to a black-box predictor). 
+% This allows us to generate counterfactuals by design (causality level-3 according to Pearl\todo{Missing citation?}). 
+% In Figure \ref{fig:counterfactual_trig}, we test the capability of providing counterfactual explanations. Counter-examples $x^\star$ are crafted following the provided explanation, while remaining as close as possible to the original sample $|x - x^\star|< \epsilon$ as proposed in \citet{wachter2017counterfactual}. We compute the reduction of confidence of the originally predicted class on the counter-example $f_(x^\star)$ as a function of the number of modified features. We compared with the interpretable methods used in Figure \ref{fig:accuracy} with the addition of XGBoost when explained by LIME ('Lime') \citep{ribeiro2016should} and a recently proposed interpretable neural network ('XReluNN') \citep{ciravegna2023logic}. As a baseline, we also compare with XGBoost when random feature permutations are performed on the original example('XGBoost').  
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=1.\columnwidth]{figs/counterfactual/counterfactual_trig.jpg}
+%     \caption{Model confidence reduction of the originally predicted class as a function of the number of perturbed features on the Trig dataset. More figures are provided in Appendix \ref{app:counterfactual}.}
+%     \label{fig:counterfactual_trig}
+% \end{figure}
+
+% More precisely, in Figure \ref{fig:counterfactual_trig} we reported the average confidence reduction on all the perturbed test samples of the Trig dataset and across 5 seed initializations. We can clearly observe how the confidence of the proposed method is drastically reduced after modifying only one feature. Only the Decision Tree provides similar performances, with the other methods requiring to modify 2–3 features to reach the same confidence level. Analogous results occur on the other datasets and are reported in Appendix \ref{app:counterfactual}. 
+
+
+% \subsection{Reasoning and generalizing out-of-distribution}
+% Here we show that we can train the model on a set of concepts and test it OOD by removing or adding new concepts on CelebA.
+
+% \subsection{Distant supervisions}
+% Here we show that we can train the model without supervising all concepts.
+
+% \subsection{Explaining global behavior}
+% Here we show the global behavior of the model by looking at Boolean global rules and comparing them with ground-truth logic rules.
+
+
+\section{Key Findings \& Significance}
+\label{sec:disc}
+\paragraph{Relations with the state-of-the-art}
+Interpretable concept-based models~\cite{koh2020concept} address the lack of human trust in AI systems as they allow their users to understand their decision process~\cite{rudin2019stop}.
+% and to improve their performance by controlling and interacting with the learnt concepts~\cite{shen2022trust}. 
+These approaches come with several advantages over other explainability methods as they circumvent the brittleness of post-hoc methods~\citep{adebayo2018sanity, kindermans2019reliability} and provide a semantic advantage in settings where input features are naturally hard to reason about (e.g., raw image pixels) by providing explanations in terms of human-interpretable concepts~\cite{ghorbani2019interpretation}.
+% ; (iii) Engender human trust by concept interventions as opposed to other concept-based interpretable models such as Self-Explainable Neural Networks~\citep{alvarez2018towards} and Concept Whitening~\cite{chen2020concept}. 
+However,~\citet{zarlenga2022concept} and~\citet{mahinpei2021promises} emphasise how state-of-the-art concept-based models
+% : (i) require a minimum set of concept labels for training which might be expensive or intractable to obtain in some contexts,  (ii) 
+either struggle to efficiently solve real-world tasks using concept truth-values only or they weaken their interpretability using concept embeddings to increase their learning capacity. This is true even when concept-based models use a simple logistic regression or decision tree to map concepts embeddings to tasks because concept embedding dimensions do not have a clear semantic meaning, and models composing such dimensions generate prediction rules that are not human interpretable. Our work solves this issue by introducing the first interpretable concept-based model that learns logic rules from concept embeddings. Our approach draws from t-norm fuzzy logic learning paradigms~\cite{diligenti2021constraint,badreddine2022logic,van2022analyzing} to obtain high generalisation across tasks and provide meaningful logic rules even in the absence of concept labels during training.
+% \todo{ADD: Several neural-symbolic approaches attempts to combine logic knowledge with deep neural architectures \cite{garcez2022neural,hitzler2022neuro} to get advantages from both of the representations. One of the main paradigm for this integration consists in relaxing the logic rules with a t-norm fuzzy logic \cite{diligenti2021constraint,badreddine2022logic,van2022analyzing} to set the task in a purely differentiable learning setting.}
+
+
+% \paragraph{Limitations}
+% \todo{for authors and reviewers of this paper: please populate this section with ideas and comments
+% \begin{itemize}
+%     \item 
+% \end{itemize}
+% }
+
+
+% \paragraph{Broader Impact}
+
+\paragraph{Conclusion}
+This work presents the \textit{Deep Concept Reasoner} (DCR), the new state-of-the-art of interpretable concept-based models. To achieve this, DCR builds for each sample a weighted logic rule combining neural and symbolic algorithms on concept embeddings in a unified end-to-end differentiable system. In our experiments, we compare DCR with state-of-the-art interpretable concept-based models and black-box models using datasets spanning three of the most common data types used in deep learning: tabular, image, and graph data. 
+Our experiments show that Deep Concept Reasoners: (i) attain better task accuracy w.r.t.\ state-of-the-art interpretable concept-based models, (ii) discover meaningful logic rules, and (iii) facilitate the generation of counterfactual examples. 
+% attain better task accuracy w.r.t.\ state-of-the-art black-box models in out-of-distribution settings where some of the training concepts are not available at test time, (iii) make interpretable concept-based predictions for the task labels which do not need to be explained in a post-hoc manner, 
+% (iv) support effective 
+% human interventions and
+% counterfactual explanations, and \mbox{(v) provide} meaningful logic rules even in the absence of concept labels at training time. 
+While the global behaviour of the model is still not directly interpretable, our results show how aggregating Boolean DCR rules provides an approximation for the global behaviour of the model which matches known ground truth relationships. As a result, our experiments indicate that DCR represents a significant advance over the current state-of-the-art of interpretable concept-based models, and thus makes progress on a key research topic within the field of explainability.

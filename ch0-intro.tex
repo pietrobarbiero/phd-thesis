@@ -1,0 +1,60 @@
+\chapter{Introduction} \label{chapter:intro}
+\textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+\textit{I will start my thesis with an overview of the state of the art of AI in research and companies and the potential impact of this field on humankind in the next decades. Next, I will discuss the current limitations and knowledge gaps which question the practical deployment of AI in high-stakes decision settings. I will conclude this chapter with an overview of my work describing how it advances the field AI and it contributes to a fairer and safer interaction with humankind.}
+
+
+\section{Deep learning and explainability}
+
+The rise of Artificial Intelligence (AI) poses ethical~\citep{duran2021afraid, lo2020ethical} and legal~\citep{wachter2017counterfactual, gdpr2017} questions, that are more and more compelling as the deployment of such technologies becomes commonplace in practice. Philosophical concerns turn into pressing needs in safety-critical domains which require accurate and trustworthy AI agents~\cite{rudin2019stop,shen2022trust}. 
+
+
+Deep learning researchers stockpile ground-breaking achievements almost as fast as they find (consistently similar!) flaws in their models~\citep{marcus2022very}. The extremely high learning capacity may allow deep learning to achieve super-human performances on some tasks at the cost of making impossible even for researchers to trace back and explain incorrect predictions. As this trend got worse, lawmakers started questioning the ethical and legal ramifications of their deployment in safety-critical domains. As a response, the research community intensified the effort in developing trustworthy, fair and reliable models. This effort lead to relevant innovations aiming at explaining the inner workings of deep neural networks. However, after years of research, trustworthy deep learning models are still outside our reach.
+
+\section{Limitations and knowledge gaps}
+
+The key requisite for human trust is for an agent to show consistent and reliable behavior~\citep{shen2022trust}. The assessment of agents' behavior is commonly measured in terms of (i) task performance i.e., the capacity of the agent to provide \textbf{\textit{accurate predictions}} for test samples, and (ii) rationale i.e., the capacity of the agent to give \textbf{\textit{explanations}} for its predictions. While intense efforts lead to consistent advances in terms of explaining trained ``black-box'' models, most of these approaches turned out to be subject of similar limitations: they are mostly qualitative (mostly visual), local (instance-based), low-level (input-based), and post-hoc (they do not make a model trustworthy by design, they try to check if a model can be trusted). A first sign of change came only recently when \citet{koh2020concept} proposed to supervise the last hidden layer of neurons with human annotated concepts. This allowed the network to (i) be aware of ground-truth human concepts at training time, (ii) use learnt concepts to provide more intuitive high-level explanations, and (iii) interact with human experts correcting mispredicted concepts at test time. While this design significantly improved human trust, it did not solve the issue as (i) the explanations were still mostly local and qualitative and (ii) enforcing concept supervisions during training lead to worse task performance. As a result, finding a good compromise between accurate predictions and robust explanations remains one of the fundamental open problems in deep learning.
+
+
+\section{Summary and contributions}
+
+This work aims at improving the current trade off between accuracy and explainability by proposing novel model designs (i) showing higher task performance compared to the state of the art, and (ii) providing quantitative and global explanations for their predictions. This work opens with an introduction to deep learning (Chapter~\ref{chapter:intro}) and explainability literature with an in-depth discussion on the main limitations of current methods including concept-based and logic-based models, metrics, datasets, and benchmarks (Chapter \ref{chapter:background}). The central chapters describe the main technical advances of this work. Chapter~\ref{chapter:metrics} discusses quantitative metrics that will be used to analyze and compare architectures throughout this work in terms of their task performance and explanation quality. Chapter~\ref{chapter:lens} addresses the ``\textit{explainability problem}'' through Logic Explained Networks i.e., neural networks providing quantitative and global concept-based explanations for their predictions. Chapter~\ref{chapter:cem} addresses the ``\textit{trade off problem}'' through Concept Embedding Models i.e., concept-based models going beyond the current compromise between accuracy and explainability. Chapter~\ref{chapter:unsupervised} extends the methods described in previous chapters to settings where (expensive!) concept annotations are not available, and must then be learnt in an unsupervised way. Chapter~\ref{chapter:applications} showcases real-world case studies and results in diverse settings from vision to biomedical applications. The last chapter provides a summary of the advances, drawing conclusion and future perspectives (Chapter~\ref{chapter:conclusion}).
+
+\bigskip
+
+\textbf{PAPERS}
+\nobibliography*
+\begin{enumerate}
+    \item Pietro Barbiero, ..., Giuseppe Marra. Interpretable Neural Symbolic Concept Reasoning. \textit{arXiv preprint arXiv:XXXX.YYYYY},2023
+    
+    \item Pietro Barbiero, ..., Elena Di Lavore. Categorical Foundations of Explainable AI: A Unifying Theory of Structures and Semantics. \textit{arXiv preprint arXiv:XXXX.YYYYY},2023
+    
+    \item \bibentry{barbiero2021entropy}
+    
+    \item \bibentry{zarlenga2022concept}
+    
+    \item \bibentry{ciravegna2021logic}
+    
+    \item \bibentry{magister2022encoding}
+    
+    \item \bibentry{zarlenga2021quality}
+
+    \item \bibentry{azzolin2022global}
+    
+    \item Federico Siciliano, Pietro Barbiero, ..., Pietro Lio'. Explaining Neural Networks Using a Ruleset Based on Interpretable Concepts. \textit{arXiv preprint arXiv:XXXX.YYYYY},2023
+    
+    \item \bibentry{georgiev2022algorithmic}
+    
+    \item Dmitry Khazdan, ..., . Graph Concept Interpretation. \textit{arXiv preprint arXiv:XXXX.YYYYY},2023
+    
+    \item \bibentry{jain2022extending}
+    
+    \item Han Xuanyuan, Pietro Barbiero, ..., and Pietro Lio' Analysing the Neurons of Graph Neural Networks: Towards Concept-Based Global Interpretability. \textit{arXiv preprint arXiv:XXXX.YYYYY}, 2023
+    
+    \item Pietro Barbiero, and Pietro Lio'. Logic-based Deep Learning Clinical models: Down Syndrome case study. \textit{arXiv preprint arXiv:XXXX.YYYYY}, 2023
+    
+    \item \bibentry{kidwai2023forecasts}
+    
+    \item \bibentry{barbiero2021graph}
+\end{enumerate}
+

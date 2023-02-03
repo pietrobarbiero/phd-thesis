@@ -1,0 +1,313 @@
+\chapter{Concept embeddings} \label{chapter:cem}
+% \textbf{Research: completed. Status: drafted. Difficulty: low. Priority: low.}
+
+% \textit{In this chapter I will illustrate how concepts can be used to train interpretable models outperforming their non-interpretable equivalents in terms of raw task performance. In particular, I will focus on my contributions in inventing Concept Embedding Models (CEMs)~\citep{zarlenga2022concept} which are now the state of the art of supervised concept-based models. I will describe CEMs architectures and learning paradigms. I will also discuss how CEMs support effective human interactions through learnt concepts highlighting how these interactions can increase both model performances and human trust in the model~\citep{shen2022trust}. I will conclude the chapter demonstrating how CEMs outperform equivalent non-interpretable architectures and state-of-the-art concept-based models on synthetic and real-world datasets.}
+
+% \section{Motivation}
+\textbf{Motivation}---In the previous chapter we discussed metrics to evaluate and compare different concept-based models we introduced in Chapter~\ref{chapter:background}. In particular we used these metrics to identify the main weaknesses of state-of-the-art concept-based models. In this chapter we are going to focus on one of the main weaknesses we identified in Concept Bottleneck Models (CBMs): the accuracy VS explainability trade off. Recalling from the previous chapter, this kind of issue is one of the key concerns in state-of-the-art explainable-by-design models as they often struggle to provide a good compromise between the accuracy of their predictions and the quality of their explanations. State-of-the-art CBMs do not escape this doom as they either provide high task performance (accuracy) or high concept alignment (interpretability) when solving challenging problems:
+%\begin{figure}[h]
+%\includegraphics[width=\textwidth]{}
+%\caption{Accuracy VS explainability trade off in Concept Bottleneck Models (CBMs). Traditional CBMs struggle to find a good compromise between task accuracy and explainability. The red star at the top right marks the optimal compromise.}
+%\label{fig:cbm_tradeoff}
+%\end{figure}
+
+On top of this issue, CBMs also struggle in real-world conditions where concept supervisions are scarce and noisy. In these scenarios, these models struggle in reaching high task accuracy as the set of concepts might not hold enough information to solve the task (see Figure~\ref{fig:cbm_real_world}). This problem is known as ``concept incompleteness'' and might heavily affect the deployment standard CBMs:
+%\begin{figure}[h]
+%\includegraphics[width=\textwidth]{}
+%\caption{Real-world conditions (e.g., concept incompleteness and noisy supervisions) impair Concept Bottleneck Models (CBMs) task accuracy. As concept supervisions available for training are reduced, the task accuracy drops dramatically.}
+%\label{fig:cbm_real_world}
+%\end{figure}
+
+To overcome this limitation, \citet{mahinpei2021promises} proposed to augment the learning capacity of CBMs by introducing extra neurons at concept level whithout imposing any direct concept supervision on their activations. This solution (a.k.a. ``hybrid CBMs'') allows the model to efficiently solve tasks even in noisy and concept-incomplete settings. However, this performance improvement comes with a cost: test-time concept interventions become ineffective (see Figure~\ref{fig:hybrid_interventions}):
+%\begin{figure}[h]
+%\includegraphics[width=\textwidth]{}
+%\caption{Concept interventions are ineffective in hybrid CBMs.}
+%\label{fig:hybrid_interventions}
+%\end{figure}
+
+This suggests that hybrid CBMs are prone to the phenomenon known as ``shortcut learning'': task performance is independent from concept activations as it relies mostly on the unsupervised extra neurons. This result demonstrates that hybrid CBMs cannot provide reliable concept-based explanations for task predictions nor they can effectively interact with human experts through the learnt concepts.
+
+\textbf{Solution}---To fill these knowledge gaps, in this chapter we will present Concept Embedding Models (CEMs,~\citep{zarlenga2022concept}), a novel class of CBMs aiming at:
+\begin{itemize}
+	\item breaking the accuracy VS explainability trade off in CBMs;
+	\item scaling CBMs to real-world conditions where concept supervisions are scarce and noisy;
+	\item supporting effective and simple human interventions through the learnt concepts.
+\end{itemize}
+The \textbf{key innovation} of CEMs is a fully supervised high-dimensional concept representation. This high-dimensional representation increases the capacity of CEMs at concept level. The increased model capacity allows to encode more information in each concept beyond the probability of a concept being active/inactive, including contextual nuances which CEMs can use to have a deeper understanding of each concept and to solve tasks more efficiently.
+
+We will first present CEM's architecture~\ref{sec:cem} and then we will demonstrate how CEMs fill the key CBMs knowledge gaps we discussed with a set of experiments of increasing complexity~\ref{sec:cem}.
+
+%\paragraph{Research questions---}
+%To evaluate these models and compared them to the current SOTA we use:
+%
+%- performance: model accuracy
+%
+%- interpretability/trust: concept alignment score, logic explanation accuracy/complexity, test-time concept interventions
+
+
+%
+%Research questions: how would this approach compare with existing approaches? is it interpretable as white boxes in terms of rule complexity? is it accurate as black boxes? what's the accuracy-vs-explainability trade-off of the approach? is there any advantage of using this approach over existing methods?
+%
+%\section{The Information Bottleneck in Concept Learning}
+
+\section{Concept Embedding Models} \label{sec:cem}
+Concept Embedding Models are a family of Concept Bottleneck Models with fully supervised high-dimensional concept representations. In particular, for each concept CEMs learn a mixture of two embeddings with explicit semantics representing the concept's activity. Such design allows CEMs to construct evidence both in favour of and against a concept being active, and supports simple concept interventions as one can switch between the two embedding states at intervention time.
+%
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/mixcem_simple_extended.png}
+%     \caption{\textbf{Mixture of Concept Embeddings Model}: from an intermediate latent code $\mathbf{h}$, we learn two embeddings per concept, one for when it is active (i.e., $\hat{\textbf{c}}^+_i$), and another when it is inactive (i.e., $\hat{\textbf{c}}^-_i$). Each concept embedding (shown in this example as a vector with $m=2$ activations) is then aligned to its corresponding ground truth concept through the scoring function $s(\cdot)$, which learns to assign activation probabilities $\hat{p}_i$ for each concept. These probabilities are used to output an embedding for each concept via a weighted mixture of each concept's positive and negative embedding.
+%     }
+%     \label{fig:split_emb_architecture}
+% \end{figure}
+%
+More specifically, we represent concept $c_i$ with two embeddings $\hat{\textbf{c}}^+_i, \hat{\textbf{c}}^-_i \in \mathbb{R}^m$, each with a specific semantics: $\hat{\textbf{c}}^+_i$ represents its active state (concept is \texttt{true}) while $\hat{\textbf{c}}^-_i$ represents its inactive state (concept is \texttt{false}). To this aim, a DNN $\psi(\mathbf{x})$ learns a latent representation $\mathbf{h} \in \mathbb{R}^{n_\text{hidden}}$ which is the input to any CEM. 
+% In practice this could be any differentiable encoder architecture designed to learn a meaningful concise representation of the input or it could be an identity function.
+MixCEM then feeds $\mathbf{h}$ into two concept-specific fully connected layers, which learn two concept embeddings in $\mathbb{R}^m$, namely $\hat{\mathbf{c}}^+_i = \phi^+_i(\mathbf{h}) = a(W^+_i\mathbf{h} + \mathbf{b}^+_i$) and $\hat{\mathbf{c}}^-_i = \phi^-_i(\mathbf{h}) = a(W^-_i\mathbf{h} + \mathbf{b}^-_i)$.\footnote{In practice, we use a leaky-ReLU for the activation $a(\cdot)$} Notice that while more complicated architectures/models can be used to parameterise our concept embedding generators $\phi^+_i(\mathbf{h})$ and $\phi^-_i(\mathbf{h})$, we opted for a simple one-layer neural network to constrain parameter growth in models with large bottlenecks.
+
+Our architecture encourages embeddings $\hat{\mathbf{c}}^+_i$ and $\hat{\mathbf{c}}^-_i$ to be aligned with ground-truth concept $c_i$ via a learnable and differentiable scoring function $s: \mathbb{R}^{2 m} \rightarrow [0, 1]$, trained to predict the probability $\hat{p}_i$ of concept $c_i$ being active from the embeddings' joint space, i.e., $\hat{p}_i \triangleq s([\hat{\mathbf{c}}^+_i, \hat{\mathbf{c}}^-_i]^T) =  \sigma\big(W_s[\hat{\mathbf{c}}^+_i, \hat{\mathbf{c}}^-_i]^T + \mathbf{b}_s\big)$. We constrain parameters $W_s$ and $\mathbf{b}_s$ to be shared across all concepts for parameter efficiency.
+% and to be consistent with existing CBMs. 
+We construct the final concept embedding $\hat{\mathbf{c}}_i$ for $c_i$ as a weighted mixture of $\hat{\mathbf{c}}^+_i$ and $\hat{\mathbf{c}}^-_i$ as:
+\[
+\hat{\mathbf{c}}_i \triangleq \big(\hat{p}_i \hat{\mathbf{c}}^+_i + (1 - \hat{p}_i) \hat{\mathbf{c}}^-_i \big)
+\]
+Intuitively, this serves a two-fold purpose: (i) it forces the model to depend only on $\hat{\mathbf{c}}^+_i$ when the $i$-th concept is active, i.e., $c_i = 1$ (and only on $\hat{\mathbf{c}}^-_i$ when inactive), leading to two different semantically meaningful latent spaces, and (ii) it enables a clear intervention strategy where one switches the embedding states when correcting a mispredicted concept, as discussed below.
+
+Finally, MixCEM concatenates all $k$ mixed concept embeddings, resulting in a bottleneck $g(\mathbf{x}) = \hat{\textbf{c}}$ with $k\cdot m$ units (see end of Figure~\ref{fig:split_emb_architecture}). This is passed to the label predictor $f$ to obtain a downstream task label. In practice, following~\citet{koh2020concept}, we use an interpretable label predictor $f$ parameterised by a simple linear layer, though more complex functions could be explored too. Notice that as in vanilla CBMs, MixCEM provides a concept-based explanation for the output of $f$ through its concept probability vector $\hat{\mathbf{p}} \triangleq [\hat{p}_1, \cdots, \hat{p}_k ]$, indicating the predicted concept activity. This architecture can be trained in an end-to-end fashion by \textit{jointly} minimising via stochastic gradient descent a weighted sum of the cross entropy loss on both task prediction and concept predictions:
+% To train our architecture, we aim to produce both accurate downstream predictions and meaningful concept-based explanations $\hat{\mathbf{p}}$ of those predictions. For this, we minimize the following loss via stochastic gradient descent:
+\begin{align}
+    % \mathcal{L} := \mathbb{E}_{(\mathbf{x}, \mathbf{y}, \mathbf{c})}\Big[ \mathcal{L}_\text{task}\Big(\mathbf{y}, f\big(g(\mathbf{x}) \; \big| \big| \; s(g(\mathbf{x}))\big)\Big) + \alpha \mathcal{L}_\text{CrossEntr}\Big(\mathbf{c}, s\big(g(\mathbf{x})\big)\Big) \Big]
+    \mathcal{L} \triangleq \mathbb{E}_{(\mathbf{x}, y, \mathbf{c})}\Big[ \mathcal{L}_\text{task}\Big(y, f\big(g(\mathbf{x})\big)\Big) + \alpha \mathcal{L}_\text{CrossEntr}\Big(\mathbf{c}, \hat{\mathbf{p}}(\mathbf{x})\Big) \Big]
+\end{align}
+where hyperparameter $\alpha \in \mathbb{R}^+$ controls how much we value concept accuracy w.r.t. downstream task accuracy. 
+
+
+\section{Beyond the Accuracy-vs-Interpretability Trade-Off}
+\subsection{Task Accuracy}
+
+\paragraph{MixCEM improves generalisation accuracy (y-axis of Figure \ref{fig:accuracy}).}
+Our evaluation shows that embedding-based CBMs (i.e., Hybrid-CBM and MixCEM) can achieve even better downstream accuracy than DNNs without concepts, and can easily outperform Boolean and Fuzzy CBMs by a large margin (up to $+45\%$ on Dot). This effect is emphasised when the downstream task is not a linear function of the concepts (e.g., XOR and Trigonometry) or when concept annotations are incomplete (e.g., Dot and CelebA). At the same time, we observe that all models achieve a similar high mean concept accuracy for all datasets (see Appendix~\ref{sec:taks_and_concept_perf}). This suggests that, as hypothesised, the trade-off between concept accuracy and task performance in concept-incomplete tasks is significantly alleviated by the introduction of concept embeddings in a CBM's bottleneck. Finally, notice that CelebA showcases how including concept supervision during training (as in MixCEM) can lead to an even higher task accuracy than the one obtained by the no-concept model ($+5\%$). This result further suggests that concept embedding representations enable high levels of interpretability without sacrificing performance.
+% These results show that concept embedding models make use of their extra capacity to encode important information needed for the downstream task which cannot be effectively encoded in a scalar/binary vector; all without the need of sacrificing the accuracy of their explanations.
+% On the XOR dataset all concept representations lead to similar task accuracy (close to $100\%$). On the Trigonometric dataset, the task accuracy of Boolean models drops to about $80\%$. On the Dot dataset, only the task accuracy of concept embedding models is above $90\%$, outperforming Boolean- and Fuzzy-based models by $\sim 20\%$ accuracy. On CUB Isolated Concept Embeddings outperform scalar concepts, but the differences are less pronounced as the bottleneck is large. Notably, in CelebA the proposed concept embedding models outperform even standard end-to-end models by $\sim 10\%$ accuracy.
+
+
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/tradeoff.pdf}
+%     \caption{Accuracy-vs-interpretability trade-off in terms of \textbf{task accuracy} and \textbf{concept alignment score} for different concept bottleneck models. In CelebA, our most constrained task, we show the top-1 accuracy for consistency with other datasets.
+%     % As the classification problem gets harder, concept embedding models outperform scalar-based concept methods. Notably, in CelebA our proposed approach outperforms even end-to-end models by a significant margin.
+%     For these results, and those that follow, we compute all metrics on test sets across $5$ seeds and report their mean and $95\%$ confidence intervals.}
+%     \label{fig:accuracy}
+% \end{figure}
+
+% \begin{figure}[!t]
+%     \centering
+%     %  \centering
+%     %  \begin{subfigure}[b]{1\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=0.4\textwidth]{fig/inference.pdf}
+%     %      \caption{Task inference from concepts, i.e. $\mathbb{P}(Y|\hat{C})$. \fg{$R^e$}}
+%     %      \label{fig:cbm_inference_scheme}
+%     %  \end{subfigure}\\
+%     %  \vspace{2mm}
+%     %  \centering
+%     %  \begin{subfigure}[b]{1\textwidth}
+%     %      \centering
+%      \includegraphics[width=\textwidth]{fig/repr_accuracy_test.pdf}
+%      \caption{Test accuracy of a random forest trained on different components of the concept representation. On the XOR dataset, all concept representations and components lead to similar task accuracy. On the Trigonometric dataset, the task accuracy of the model based on Boolean concepts drops significantly. On the Dot dataset, only the model based on concept embeddings context has high task accuracy. The task accuracy based on concept semantics is similar for all models and for all datasets.}
+%     %      \label{fig:cbm_inference_results}
+%     %  \end{subfigure}
+%     % \caption{Inference.}
+%     \label{fig:cbm_inference_results}
+% \end{figure}
+
+
+\paragraph{MixCEM overcomes the information bottleneck (Figure~\ref{fig:info_plane}).}
+The Information Plane method indicates, as hypothesised, that embedding-based CBMs (i.e., Hybrid-CBM and MixCEM) do not compress input data information, with $I(X, C)$ monotonically increasing during training epochs. On the other hand, Boolean and Fuzzy CBMs, as well as vanilla end-to-end models, tend to ``forget''~\citep{shwartz2017opening} input data information in their attempt to balance competing objective functions. Such a result constitutes a plausible explanation as to why embedding-based representations are able to maintain both high task accuracy and mean concept accuracy compared to CBMs with scalar concept representations. In fact, the extra capacity allows CBMs to maximise concept accuracy without over-constraining concept representations, thus allowing useful input information to pass by. In MixCEMs all input information flows through concepts, as they supervise the whole concept embedding. In contrast with Hybrid models, this makes the downstream tasks completely dependent on concepts, which explains the higher concept alignment scores obtained by MixCEM (see below).
+% The relationship between the quality of concept representations w.r.t. the input distribution remains widely unexplored. In this work we propose investigating this relationship using the notion of the Information Plane~\cite{tishby2000information}.
+% : we would be (probably) the first at pinpointing a clear relationship.
+% Specifically, we conjecture that employing embeddings as concept representations circumvents the information bottleneck by preserving more information from the input distribution as part of their high-dimensional activations. Such a result would constitute a pausible explanation as to why embedding-based representations are able to maintain both high task accuracy and mean concept accuracy compared to CBMs with scalar concept-representations. If true, we believe such effect should be captured by the Information Plane in the form of a positively correlated evolution of $I(X, C)$, the MI between inputs $X$ and learnt concept representations $C$,  and $I(C, Y)$, the MI between learnt concept representations $C$ and task labels $Y$. In contrast, we anticipate that scalar-based concept representations (e.g., Fuzzy and Bool CBMs), as well as end-to-end models, will be forced compress the information from the input data at concept level, leading to a compromise between the $I(X, C)$ and $I(C, Y)$. 
+% We empirically show this exact phenomenon in Figure~\ref{fig:info_plane}, where we plot the evolution of the $I(X, C)$ vs $I(C, Y)$ evaluated on the test set of each task and model during training. Notice that our results indicate that CBMs using embedding representations do not compress input data information (i.e., $I(X, C)$ remains monotonically increasing during training) while CBMs using scalar-based representations, as well as vanilla end-to-end models, tend to ``forget'' input data information in their attempt to balance competing objective functions (e.g., interpretability and downstream performance). \todo{THIS NEEDS TO BE CONCLUDED. What is the main takeaway from this experiment and what is the message we want the reader to take from it?}.
+
+
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/mutual_info_xcy.pdf}
+%     % \hspace{1.cm}\textsc{XOR}\hspace{4.2cm}\textsc{DOT}\hspace{3.5cm}\textsc{Trigonometry}\\
+%     % \vspace{-.cm}
+%     % \includegraphics[width=0.2\textwidth]{fig/xor_plot_I(X,T)vsI(T,Y).pdf}
+%     % \includegraphics[width=0.2\textwidth]{fig/dot_plot_I(X,T)vsI(T,Y).png}
+%     % \includegraphics[width=0.2\textwidth]{fig/trig_plot_I(X,T)vsI(T,Y).png}\\
+%     % \includegraphics[trim=0 0 50 0, clip, width=0.32\textwidth]{fig/xor_plot_I(X,T)vsI(T,C).png}
+%     % \includegraphics[trim=0 0 50 0, clip, width=0.32\textwidth]{fig/dot_plot_I(X,T)vsI(T,C).png}
+%     % \includegraphics[trim=0 0 50 0, clip, width=0.32\textwidth]{fig/trig_plot_I(X,T)vsI(T,C).png}\\
+%     % \includegraphics[trim=22 235 0 92, clip, width=0.65\textwidth]{fig/legend1.png}    
+%     % \includegraphics[trim=115 235 102 90, clip, width=0.33\textwidth]{fig/legend2.png}
+%     \caption{Mutual Information (MI) of concept representations ($\hat{C}$) w.r.t. input distribution ($X$) and ground truth labels ($Y$) during training.
+%     % MI between concept representations and task labels ($I(T;Y))$) against MI between concept representations and input distributions ($I(X;T))$) (top row). MI between concept representations and concept labels ($I(T;C))$) against MI between concept representations and input distributions ($I(X;T))$) (bottom row).
+%     Each point is produced by averaging over $5$ runs. The size of the points is proportional to the training epoch.%\todo{Add legend and results for CUB and CelebA.}
+%     }
+%     \label{fig:info_plane}
+% \end{figure}
+
+\subsection{Interpretability}
+
+% \giu{The headings of the following two paragraphs overlaps a bit in message. Make the distinction a bit sharper. Maybe also switch their order?  }
+
+\paragraph{MixCEM learns more interpretable concept representations (x-axis of Figure~\ref{fig:accuracy}).}
+Using the proposed CAS metric, we show that concept representations learnt by MixCEMs have alignment scores competitive or even better (e.g., on CelebA) than the ones of Boolean and Fuzzy CBMs. The alignment score also shows, as hypothesised, that hybrid concept embeddings are the least faithful representations---with alignment scores up to $25\%$ lower than MixCEM in the Dot dataset. This is due to their unsupervised activations containing information which may not be necessarily relevant to a given concept. This result  is a further evidence for why we expect interventions to be ineffective in Hybrid models (as we show shortly).
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/all_concept_auc.pdf}
+%     \caption{\textbf{Alignment of learnt concepts w.r.t. their ground truth labels.} As the classification problem gets harder, the proposed approach outperforms hybrid representations by a large margin. Alignment scores of hybrid concepts are close to random chance. Notably, in CUB$^*$ concepts learnt by the proposed approach are even more aligned with the corresponding labels compared with Boolean or Fuzzy concepts. Concept alignment is computed on test sets over $5$ runs. Results are reported with the mean and its $95\%$ confidence interval.}
+%     \label{fig:alignment}
+% \end{figure}
+
+
+
+\paragraph{MixCEM captures meaningful concept semantics (Figure \ref{fig:xai}).}
+% \todo{This entire subsection needs to be updated (MATEO). Please do not review yet.... Story to be told here: (1) our concept embeddings can be useful as representations for downstream tasks that depend only on a few concepts (2) why? we can clearly see that their latent space is very separable compared to that of Hybrid by maintaining a clear separation between activated and inactivated concepts (3) this is further corroborated by looking at nearest neighbors of a given concept.}
+Our concept alignment results hint at the possibility that concept embeddings learnt by MixCEM may be able to offer more than simple concept prediction. In fact, we hypothesise that their seemingly high alignment may lead to these embeddings forming more interpretable representations than Hybrid embeddings, which can lead to more useful representations for external downstream tasks. To explore this, we train a Hybrid-CBM and a MixCEM using a variation of CUB with only 25\% of its concept annotations randomly selected before training, resulting in a bottleneck with 28 concepts. Once these models have been trained to convergence,
+we use their learnt bottleneck representations to predict the remaining 75\% of the concept annotations in CUB using a simple logistic linear model. The model trained using the Hybrid bottleneck notably underperfoms when compared to the model trained using the MixCEM bottleneck (Hybrid-trained model has a mean concept accuracy of 91.83\% $\pm$ 0.51\% while the MixCEM-trained model's concept accuracy is 94.33\% $\pm$ 0.88\%). This corroborates our CAS results by suggesting that the bottlenecks learnt by MixCEMs are considerably more powerful as interpretable representations and can be used in separate downstream tasks.
+
+We can further explore this phenomena qualitatively by visualising the embeddings learnt for a single concept using its 2-dimensional t-SNE~\citep{van2008visualizing} plot.
+% and (ii) by looking at samples whose concept embeddings $\{\hat{\mathbf{c}}_i^{(1)}, \hat{\mathbf{c}}_i^{(2)}, \cdots \}$ for concept $c_i$ are closest to the embedding $\hat{\mathbf{c}}_i^{(\text{test})}$ of a test point $\mathbf{x}^{(\text{test})}$.
+As shown in colour in Figure~\ref{fig:mixcem_tsne}, we can see that the embedding space learnt for a concept $\hat{\mathbf{c}}_i$ (we show here the concept ``has white wings'') forms two clear clusters of samples, one for points in which the concept is active and one for points in which the concept is inactive. When performing a similar analysis for the same concept in the Hybrid CBM (Figure~\ref{fig:hybrid_tsne}), where we use the entire extra capacity as the concept's representation, we see that this latent space is not as clearly separable as that in MixCEM's embeddings, suggesting this latent space is unable to capture concept-semantics as clearly as MixCEM's latent space. Notice that MixCEM's t-SNE seems to also show smaller subclusters within the activated and inactivated clusters. As Figure~\ref{fig:mixcem_nn} shows, by looking at the nearest Euclidean neighbours in concept's $c_i$ embedding's space, we see that MixCEM concepts do not only clearly capture a concept's activation, but they exhibit high class-wise coherence by mapping same-type birds close to each other (explaining the observed subclusters). These results, and similar results shown in Appendix), strongly suggest that MixCEM is learning useful and interpretable high-dimensional concept representations.
+
+% The proposed approach makes concepts' latent spaces isolated. For each concept the approach generates clusters strongly correlated with concept labels (top row). As a result, each super-cluster has a straightforward interpretation: concept on / concept off---as in Boolean or fuzzy representations. Interpretable sub-clusters correlated to both concepts and tasks emerge in latent spaces (see Figure \ref{fig:tsne_tasks} and \ref{fig:bird_clusters}, top): samples' nearest neighbors are coherent and share common features (see Figure \ref{fig:bird_nearest}, top). On the contrary, in hybrid concept representations samples do not cluster according to concept labels (see Figure \ref{fig:xai}, bottom row) as the extra neurons are not supervised and contain strongly entangled information. In hybrid concepts, small clusters are less coherent (see Figure \ref{fig:tsne_tasks} and \ref{fig:bird_clusters}, bottom).
+
+% \begin{figure}[!ht]
+%     \centering
+%     \begin{subfigure}[b]{0.3\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{fig/mixcem_tsne.png}
+%         \subcaption{
+%         }
+%         \label{fig:mixcem_tsne}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.3\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{fig/hybrid_tsne.png}
+%         \subcaption{
+%         }
+%         \label{fig:hybrid_tsne}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.3\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{fig/mixcem_nn.png}
+%         \subcaption{
+%         }
+%         \label{fig:mixcem_nn}
+%     \end{subfigure}
+    
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/tsne_task_splitemb_perching.png}
+%     %     %  \caption{Low dimensional representation of the neural symbolic concept embedding "has wing color grey".}
+%     %     %  \label{fig:tsne_emb}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/tsne_concept_splitemb_perching.png}
+%     %     %  \caption{Low dimensional representation of the hybrid concept embedding "has wing color grey".}
+%     %     %  \label{fig:tsne_fuzzyplus}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/cluster_splitemb_perching.png}
+%     %     %  \caption{Rows are clusters found from the concept embedding of "multi-colored chest".}
+%     %     %  \label{fig:bird_clusters}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/nearest_splitemb_perching.png}
+%     %     %  \caption{Rows are clusters found from the concept embedding of "multi-colored chest".}
+%     %     %  \label{fig:bird_clusters}
+%     %  \end{subfigure}\\
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/tsne_task_fuzzyp_perching.png}
+%     %      \caption{TSNE of the concept embedding "has wing color grey". Colors are tasks (bird species). Top: MixCEM. Bottom: hybrid.}
+%     %      \label{fig:tsne_tasks}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/tsne_concept_fuzzyp_perching.png}
+%     %      \caption{TSNE of the concept embedding "has wing color grey". Red/blue colors show if "has wing color grey" is true/false. Top: MixCEM. Bottom: hybrid.}
+%     %      \label{fig:tsne_concepts}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/cluster_fuzzyp_perching.png}
+%     %      \caption{Rows are clusters found from the concept embedding of "multi-colored chest". Top: MixCEM. Bottom: hybrid.}
+%     %      \label{fig:bird_clusters}
+%     %  \end{subfigure}\quad
+%     % \begin{subfigure}[b]{0.23\textwidth}
+%     %      \centering
+%     %      \includegraphics[width=\textwidth]{fig/xai/nearest_fuzzyp_perching.png}
+%     %      \caption{Sample's nearest neighbors in the embedding space of the concept "multi-colored chest". Top: MixCEM. Bottom: hybrid.}
+%     %      \label{fig:bird_nearest}
+%     %  \end{subfigure}\\
+%     \caption{Qualitative results: (a and b) t-SNE visualisations of ``has white wings'' concept embedding learnt in CUB with sample points coloured red if the concept is active in that sample, (c) top-5 test neighbours of MixCEM embedding for the concept ``has white wings'' across 5 random test samples.}
+%     \label{fig:xai}
+% \end{figure}
+
+
+
+\section{Interacting with High-Dimensional Concepts}
+
+\subsection{Intervening with Concept Embeddings}
+As in vanilla CBMs, MixCEMs support test-time concept interventions. To intervene on concept $c_i$, one can update $\hat{\mathbf{c}}_i$ by swapping the output concept embedding for the one semantically aligned with the concept ground truth label. For instance, if for some sample $\mathbf{x}$ and concept $c_i$ a MixCEM predicted $\hat{p}_i = 0.1$ while a human expert knows that concept $c_i$ is active ($c_i=1$), they can perform the intervention $\hat{p}_i := 1$. This operation updates MixCEM's bottleneck by setting $\hat{\mathbf{c}}_i$ to $\hat{\mathbf{c}}^+_i$ rather than $\big(0.1 \hat{\mathbf{c}}^+_i + 0.9 \hat{\mathbf{c}}^-_i\big)$. Such an update allows the downstream label predictor to act on information related to the corrected concept.
+
+In addition, we introduce \textit{RandInt}, a regularisation strategy exposing MixCEMs to concept interventions during training to improve the effectiveness of such actions at test-time. RandInt randomly performs independent concept interventions during training with probability $p_\text{int}$ (i.e., $\hat{p}_i$ is set to $\hat{p}_i := c_i$ for concept $c_i$ with probability $p_\text{int}$). In other words, for all concepts $c_i$, their embeddings during training are computed as:
+\[
+    \hat{\mathbf{c}}_i = \begin{cases}
+        \big(c_i \hat{\mathbf{c}}^+_i + (1 - c_i) \hat{\mathbf{c}}^-_i\big) & \text{with probability } p_\text{int} \\
+        \big(\hat{p}_i \hat{\mathbf{c}}^+_i + (1 - \hat{p}_i) \hat{\mathbf{c}}^-_i\big) & \text{with probability } (1 - p_\text{int})
+    \end{cases}
+\]
+
+while at test-time we always use the predicted probabilities for performing the mixing. During backpropagation, this strategy forces feedback from the downstream task to update only the correct concept embedding (e.g., $\hat{\mathbf{c}}^+_i$ if $c_i = 1$) while feedback from concept predictions can update both $\hat{\mathbf{c}}^+_i$ and $\hat{\mathbf{c}}^-_i$. Under this view, RandInt can be thought of as learning an average over an exponentially large family of MixCEM models (similarly to dropout~\citep{srivastava2014dropout}) where some of the concept representations are trained using only feedback from their concept label while others receive training feedback from both their concept and task labels. In the extreme case when the embedding size is $m = 1$ and we only have one concept (i.e., $k = 1$), this process can be seen as randomly alternating between learning a Joint-CBM and a Sequential-CBM during training, with $p_\text{int}$ controlling how often we switch between joint training and sequential training.
+
+
+\subsection{Interventions}
+
+\paragraph{MixCEM supports effective concept interventions and is more robust to incorrect interventions (Figure~\ref{fig:interventions}).} When describing our MixCEM architecture, we argued in favour of using a mixture of two semantic embeddings for each concept as this would permit test-time interventions which can meaningfully affect entire concept embeddings. In Figure~\ref{fig:interventions} left and center-left, we observe, as hypothesised, that using a mixture of embeddings allows MixCEMs to be highly responsive to random concept interventions in their bottlenecks. Notice that as predicted, although all models have a similar concept accuracy, we observe that Hybrid CBMs, while highly accurate without interventions, quickly fall short against even scalar-based CBMs once several concepts are intervened in their bottlenecks. In fact, we observe that interventions in Hybrid CBM bottlenecks have little effect on their predictive accuracy, something that did not change if logit concept probabilities were used instead of sigmoidal probabilities. More interestingly, however, we see in Figure~\ref{fig:interventions} center-right and right that when we perform intentionally incorrect interventions (where a concept is set to the wrong value), MixCEM's performance hit is not as sharp as that of CBMs with scalar representations. We believe this is a consequence of MixCEM's ``incorrect'' embeddings still carrying important task-specific information which can then be used by the label predictor to produce more accurate task labels. Finally, by comparing the effect of interventions in both MixCEMs and MixCEMs trained without RandInt, we observe that RandInt in fact leads to a model that is not just significantly more receptive to interventions, but is also able to outperform even scalar-based CBMs when large portions of their bottleneck are artificially set by experts. This suggests that our proposed architecture can not only be trusted in terms of its downstream predictions and concept explanations, as seen above, but it can also be a highly effective model when used along with experts that can correct mistakes in their concept predictions.
+
+% \begin{figure}[!h]
+%     \centering
+%     \includegraphics[width=1.\textwidth]{fig/interventions_complete_with_adversarial.png}
+%     \caption{Effects of performing positive random concept interventions (left and center left) and intentionally incorrect interventions (center right and right) for different concept representations in CUB and CelebA. As in~\citep{koh2020concept}, when intervening in CUB we intervene using groups of concepts which are mutually exclusive.}
+%     \label{fig:interventions}
+% \end{figure}
+
+\section{Robustness and Cost Effectiveness}
+Overall the results of our experiments demonstrate how CEMs can:
+\begin{itemize}
+	\item break the accuracy VS explainability trade off in CBMs;
+	\item scale CBMs to real-world conditions where concept supervisions are scarce and noisy;
+	\item support effective and simple human interventions through the learnt concepts.
+\end{itemize}
+In fact, CEMs' task accuracy is higher than equivalent black boxes' and comparable with hybrid CBMs. At the same time, CEMs' concept alignment is as good as in vanilla CBMs and much higher than in hybrid or fuzzy CBMs for challenging tasks. This can be explained thanks to the high-dimensional concept representation in CEMs which allows more information to flow through concepts, thus breaking the information bottleneck at concept level. As all neurons at concept level are supervised, all the information flowing through task depends on concept neurons, which makes tasks fully dependent on concepts, making CEMs able to support efficient concept interventions which increase human trust as opposed to hybrid CBMs.
+
+
+
+Impact/significance: self-explainability is an ethical and (soon) legal requirement for the deployment of AI-based technologies. However, it's often coming at the cost of reducing models' accuracy. This work solves this trade-off for concept-based models, so it has an impact on:
+
+- the concept-based and the XAI field as novel self-explaining approach which may encourage further advances in concept learning
+
+- other research disciplines as CEMs keep working well in real-world conditions where (expensive!) concept-supervisions are scarce + users can trust predictions (model is accurate) and can interact with the model to verify the "causal" relationship between learnt tasks and concepts (or just improve model performance through interventions)
+
+- production/society as self-explaining models might become a legal requirement and high-performance is a must
+
+\section{A Remark on Concept Annotations}
+Even though CEM is efficient in real-world conditions where concept supervisions are scarce, it still requires some supervisions at concept level. Such supervisions might be expensive and in some cases (e.g. biology) concepts might be unknown a priori which makes it impossible to train supervised concept bottleneck models. How can we train concept bottleneck models without supervised concepts?
+
+
+\section*{Papers}
+\nobibliography*
+\begin{itemize}
+    \item \bibentry{zarlenga2022concept}
+\end{itemize}

@@ -1,0 +1,339 @@
+\chapter{Concept Self-Awareness} \label{chapter:unsupervised}
+\textbf{Research: in progress. Status: drafted. Difficulty: medium. Priority: high.}
+
+\textit{In this chapter I will illustrate how to make models ``aware'' of concepts they discover during training eliminating the need for expensive (and manual) concept annotations. I will first describe how to make networks learn concept encodings without using any concept label during training. Next I will show how to avoid \textit{shortcut learning}~\citep{geirhos2020shortcut} which can prevent the network to learn a ``complete'' and robust concept representation. I have already obtained preliminary results on graph neural networks~\citep{magister2022encoding} which I submitted to the Neural Information and Processing Systems conference. In the next few months I will focus on extending the approach to other common architectures such as convolutional networks. I will conclude the chapter showing the results on real-world settings comparing supervised and unsupervised concept learning methods.}
+
+
+Summary to this point: up to here we demonstrated how to design self-explainable models which are as accurate as black boxes (or more) without sacrificing interpretability and the effectiveness of causual human interactions. In this chapter I will show a trick to train concept bottleneck modes for GNNs without expensive and sometimes unknown concept annotations.
+
+\section{Motivation}
+Knowledge gap/motivation: CEMs and LENs are robust self-explaining models going beyond the current accuracy-vs-explainability trade-off. However, these models require concept supervisions which might be expensive to generate to train the model, but in some cases might not even be known a priori, which makes impossible to train a concept bottleneck in a supervised way. In this setting there are papers (ACE, GCExplainer) showing how latent concepts can be extracted from trained architectures post-hoc with the assumption that: 1 concept == 1 cluster. However, the existing concept-based unsupervised approaches are post-hoc, while we argue against this family of approaches because they do not increase human trust in the model itself allowing for interventions at test time, nor they try to make the model itself more explainable. So, here we try to find a way to exploit the natural clustering performed in hidden layers of a neural network to make the NN aware of concepts and use them to predict the classification targets, making the architecture self-explainable.
+
+Contribution: a self-explainable GNN model distilling unsupervised concepts at train time and using these concepts to solve the task.
+
+Key innovation: a concept distillation layer based on hard cluster encodings.
+
+Expected outcome: the concept distillation layer generates hard cluster encodings (labels) in the hidden layers of a GNN. Each cluster can be thought as a concept representing a spacific motif/subgraph. A LENs model is trained on top of cluster encodings to generate logic explanations for the predictions of the GNN based on the concepts learnt without concept annotations. The model is evaluated in terms of:
+
+- performance: model accuracy
+
+- interpretability: concept purity (edit distance of motifs in each cluster), concept completeness, logic explanations' accuracy and complexity
+
+Research questions: how would this approach compare with existing approaches (post-hoc such as black-box GNN + GCExplainer)? is it interpretable as white boxes in terms of rule complexity? is it accurate as black boxes? what's the accuracy-vs-explainability trade-off of the approach? is there any advantage of using this approach over existing methods?
+
+
+\section{The Costs of Supervised (Concept) Learning}
+
+\section{Fantastic Concepts and Where to Find Them}
+
+\section{Encoding Concepts in Neural Networks}
+\paragraph{Concept distillation}
+The first CDM step consists in extracting node-level clusters corresponding to concepts from the GNN's latent space. This is based on the observation that the arrangement of the activation space shows similarities to human perceptual judgement~\citep{zhang2018unreasonable}, as shown by GCExplainer~\citep{magister2021gcexplainer} for GNNs. However, in contrast to GCExplainer, in CDM this step is differentiable and integrated in the network architecture, allowing gradients to optimize clusters in GNN embeddings. Specifically, we implement this differentiable clustering using a normalized softmax activation on the node-level embeddings $\mathbf{h}_i$, associating each node with one cluster/concept. This operation returns for each node a fuzzy encoding $\mathbf{q}_i \in [0,1]^s$:
+\begin{equation} \label{eq:diffGCExp}
+    \tilde{\mathbf{q}}_i = \frac{\exp({\mathbf{h}_i})}{\sum_{u=1}^s \exp(\mathbf{h}_{iu})}, \qquad \mathbf{q}_i = \frac{\tilde{\mathbf{q}}_i}{\max_i \tilde{\mathbf{q}}_i + \epsilon}
+\end{equation}
+where $s$ is the size of the encoding vector. CDM then clusters nodes considering the similarity of their fuzzy encodings $\mathbf{q}_i$. Specifically, CDM groups the samples together depending on their Booleanized encoding $\mathbf{r}_i \in \{0,1\}^s$:
+\begin{equation}
+    \mathbf{r}_{iu} = 
+    \begin{cases}
+    1 \quad \text{ if } \mathbf{q}_{iu} \geq \tau\\
+    0 \quad \text{ otherwise }
+    \end{cases}
+    % \mathbb{I}_{\mathbf{q}_i \geq \epsilon}
+\end{equation}
+where $\tau \in [0,1]$ is conventionally set to $0.5$.
+In particular, two samples $a$ and $b$ belong to the same cluster if and only if their encodings $\mathbf{r}_a$ and $\mathbf{r}_b$ match.  For example, consider the two node embeddings $\mathbf{h}_a = [-1.2, 2.3]$ and $\mathbf{h}_b = [2.2, 1.8]$. For these inputs, the normalized softmax would return the fuzzy encodings $\mathbf{q}_a = [0.0293, 0.9707]$ and $\mathbf{q}_b = [0.5987, 0.4013]$, respectively. As their Booleanizations $\mathbf{r}_a = [0, 1]$ and $\mathbf{r}_b = [1, 0]$ do not match, we can then conclude that the two nodes belong to different clusters. Notice how our concept encoding is highly efficient, as it allows to learn up to $2^s$ different concepts on GNN embeddings $\mathbf{h}_i$ of size $s$. This way the GNN can dynamically find the optimal number of concepts/clusters, thus relieving users from this burden. In fact, users just need to choose an upper bound to the number of concepts $s$ rather than an exact value, as when using k-Means like in GCExplainer. In order to account for graph classification, the concept encodings for a graph are pooled before being passed to the interpretable model predicting the task, as explained in the next paragraph.
+% On the other hand, the softmax function puts $\mathbf{q}_i$ elements in competition, thus encouraging the model to identify only a few concepts.
+
+\paragraph{Interpretable predictions}
+The second CDM step consists of using the distilled concepts to make interpretable predictions for downstream tasks. In particular, the presence of concepts enables pairing GNNs with existing concept-based methods which are explainable by design, such as Logic Explained Networks (LENs,~\citep{ciravegna2021logic}). LENs are neural models providing simple concept-based logic explanations for their predictions. Specifically, LENs can provide class-level explanations which makes our approach the first at providing unique global explanations for GNNs. CDM uses a LEN as the readout function $f$ for the classification, applying it on top of concept representations $\mathbf{q}_i$. For graph classification tasks, the input data is composed of a set of $t$ graphs $G^j \in \{(V^j, E^j)\}_{j=1}^t$, where each graph is associated with a task label $y^j \in Y$. In this setting, GNN-based models predict a single label for each graph $G^j$ by pooling its node-level encodings $\mathbf{q}_i^j$ to aggregate over multiple concepts:
+\begin{equation} \label{eq:lens}
+    \hat{y}_i = \text{LEN}_{\text{node}} ( \mathbf{q}_i), \qquad
+    \hat{y}^j = \text{LEN}_{\text{graph}} \Bigg(\frac{1}{n_j} \sum_{i=1}^{n_j} \mathbf{q}_i^j \Bigg)
+\end{equation}
+where $n_j$ is the number of nodes associated with graph $j$. In our implementation, we use the entropy-based layer to implement LENs~\citep{barbiero2021entropy}) as it can provide high classification accuracy with high-quality logic explanations. This entropy-based layer implements a sparse attention layer designed to work on top of concept activations.
+% \begin{equation} \label{eq:alpha}
+%     \alpha^i = \frac{e^{\gamma^i/\tau}}{\sum_{l=1}^k e^{\gamma^i_l/\tau}}
+% \end{equation}
+The attention mechanism allows the model to focus on a small subset of concepts to solve each task. It also introduces a parsimony principle in the architecture corresponding to an intuitive human cognitive bias~\citep{miller1956magical}. This parsimony principle allows the extraction of simple logic explanations from the network, thus making these models explainable by design. 
+
+% \paragraph{Interactive Concept-based Graph Layer}
+% The Interactive Concept-based Graph Layer combines DGCExplainer and E-LENs. Conceptually, the layer first performs concept discovery using the normalised softmax activation function to associate each node embedding with a concept encoding. In order to account for graph classification, the concept encodings for a graph are pooled using global mean pooling before being passed to E-LENs. We propose global mean pooling over minimum or maximum pooling of concept representations, as it will give an average idea of the activation of a feature. We implement the Interactive Concept-based Graph Layer in the following way:
+% \begin{equation} \label{eq:lens}
+%     (y, \phi) = LEN(\frac{1}{n} \sum_{i=1}^{n}q_i)
+% \end{equation}
+% where $n$ is the number of nodes associated with graph $j$. 
+% The components of the layer are fully differentiable, allowing to train the model using classical methods, and making it explainable-by-design. Furthermore, the concept encoding component of the layer allows for human intervention, as the concept encoding may be corrected after the training of the network to improve model performance.
+
+\paragraph{Concept-based and logic-based explanations}
+The proposed method provides two types of explanations: concept-based and logic-based explanations. Global concept-based explanations can be extracted in a similar manner as in GCExplainer: a concept for a node or graph is extracted by finding the cluster with which a node's embedding is associated, and visualising the samples closest to the cluster centroid. The logic-based formula provided per class broadens the explanation scope, as it indicates which neurons of the concept encoding $\mathbf{q}_i$ are activated and representative of a class. This provides a more comprehensive explanation since a class can be associated with multiple concepts. 
+
+\paragraph{Concept interventions}
+As in Concept Bottleneck Models~\citep{koh2020concept}, our approach supports human interaction at concept level. In fact, in contrast to existing post-hoc methods, an explainable-by-design approach creates an explicit concept layer which can positively react to test-time human interventions. For instance, consider a misclassified node with concept encoding $\mathbf{q}_a = [0.21, 0.93]$. Assume that the vast majority of nodes with the binary encoding $\mathbf{r}_{\text{grid\_node}} = [0, 1]$ are nodes of a grid-like structure, which allows a human to label this cluster as ``grid nodes''. Now, a human expert can inspect the neighborhood of the misclassified node and realize that this node belongs to a circle-like structure and not to a grid structure. As the binary encoding for the concept ``circle nodes'' is $\mathbf{r}_{\text{circle\_node}} = [1, 1]$, the user can easily apply an intervention to correct the misclassified concept by changing its encoding to $\mathbf{q}_a:=[1, 1]$. Such an update allows the interpretable readout function to act on information related to the corrected concept, thus improving the original model prediction.
+
+\section{Experiments and results}
+
+\begin{table*}[!t]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lllllll}
+\toprule     & \multicolumn{2}{c}{\textbf{\begin{tabular}[c]{@{}c@{}}Model Accuracy (\%)\end{tabular}}} & \multicolumn{2}{c}{\textbf{\begin{tabular}[c]{@{}c@{}}Concept  Completeness (\%)\end{tabular}}} & \multicolumn{2}{c}{\textbf{\begin{tabular}[c]{@{}c@{}}Concept  Purity\end{tabular}}} \\
+                       & \multicolumn{1}{c}{\textbf{CGN}}      & \multicolumn{1}{c}{\textbf{Vanilla GNN}}      & \multicolumn{1}{c}{\textbf{CGN}}          & \multicolumn{1}{c}{\textbf{Vanilla GNN}}         & \multicolumn{1}{c}{\textbf{CGN}}      & \multicolumn{1}{c}{\textbf{Vanilla GNN}}      \\ \midrule
+\textbf{BA-Shapes}     & \textbf{98.11 (97.04, 99.18)}         & 98.02 (96.40, 99.65)                          & \textbf{98.11 (96.85, 99.36)}             & 93.69 (86.21, 100.00)                            & \textbf{0.00 (0.00, 0.00)}            & 0.00 (0.00, 0.00)                             \\
+\textbf{BA-Community}  & 85.67 (81.38, 89.95)        & \textbf{87.50 (85.56, 89.45)}                 & \textbf{83.10 (78.90, 87.29)}             & 75.74 (72.85, 78.64)                             & 1.70 (0.43, 3.83)            & \textbf{1.60 (0.49, 2.71)}                    \\
+\textbf{BA-Grid}       & 99.51 (98.75, 100.00)        & \textbf{99.71 (99.38, 100.00)}                & 99.61 (98.80, 100.00)                     & \textbf{99.71 (99.38, 100.00)}                   & \textbf{0.20 (0.00, 0.76)}            & 2.40 (0.00, 6.48)                             \\
+\textbf{Tree-Cycle}    & \textbf{94.97 (92.50, 97.44)}         & 86.26 (58.58, 100.00)                         & \textbf{91.98 (83.71, 100.00)}            & 91.16 (84.47, 97.86)                             & \textbf{0.00 (0.00, 0.00)}            & 0.60 (0.00, 2.27)                              \\
+\textbf{Tree-Grid}     & \textbf{95.17 (93.59, 96.75)}         & 94.54 (93.61, 95.46)                          & \textbf{91.37 (84.58, 98.16)}             & 78.48 (76.17, 80.79)                             & \textbf{0.00 (0.00, 0.00)}            & 0.00 (0.00, 0.00)                              \\
+\textbf{Mutagenicity}  & \textbf{82.40 (81.31, 83.48)}         & 82.35 (81.64, 83.06)                          & 63.40 (58.84, 67.96)            & \textbf{63.95 (60.14, 67.77)}                    & 1.00 (0.00, 3.78)                     & \textbf{0.60 (0.00, 2.27)}                    \\
+\textbf{Reddit-Binary} & 90.55 (87.95, 93.15)                  & \textbf{91.20 (88.82, 93.58)}                 & \textbf{75.91 (61.16, 90.66)}             & 73.10 (58.44, 87.75)                  & 0.40 (0.00, 1.51)                     & \textbf{0.00 (0.00, 0.00)}                   \\ \bottomrule
+\end{tabular}%
+}
+\caption{Model accuracy and concept completeness for the Concept-based Graph Network (CGN) and an equivalent vanilla GNN. For these results, and those that follow, we compute all metrics on test sets across five seeds and report their mean and $95\%$ confidence intervals.}
+    \label{fig:accuracy}
+\end{table*}
+
+
+% \newcommand\conceptsizef{30}
+% \newcommand\vfigsf{-.5\height}
+
+% % \newcommand\conceptsizef{60}
+% % \newcommand\vfigsf{-.3\height}
+% % Please add the following required packages to your document preamble:
+% % \usepackage{graphicx}
+% \begin{table*}[!t]
+% \centering
+% \renewcommand{\arraystretch}{1}
+% \resizebox{\textwidth}{!}{%
+% \begin{tabular}{cccccccc}
+% \toprule
+%  & \textbf{BA-Shapes} & \textbf{BA-Grid} & \textbf{Tree-Grid} & \textbf{Tree-Cycle} & \textbf{BA-Community} & \textbf{Mutagenicity} & \textbf{Reddit-Binary} \\
+% \midrule
+% \textbf{Ground Truth} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/house.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/grid.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/grid.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/ring.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/house.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/ring.pdf}}  \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/no2.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/star.pdf}}  \\
+% \textbf{Extracted Concept} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/BA_Shapes_concept_5.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/BA_Grid_concept_2.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/Tree_Grid_concept_21.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/Tree_Cycle_concept_8.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/BA_Community_concept_30.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/Mutagenicity1.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/logic_expl_graphs/Reddit_Binary_concept_24.pdf}}  \\
+% \bottomrule\\
+% \end{tabular}%
+% }
+% \caption{The Concept Distillation Module detects meaningful concepts matching the expected ground truth. Blue nodes are the instances being explained, while orange nodes represent their $p$-hop neighbors. Similar motifs are identified by GCExplainer.}
+% \label{tab:concept_visuals}
+% \end{table*}
+
+
+%\subsection{Task Accuracy and Completeness}
+\paragraph{Concept Graph Networks are as accurate as vanilla GNNs (Table \ref{fig:accuracy})}
+Our results show that CDM allows GNNs to achieve better or comparable task accuracy w.r.t. equivalent GNN architectures. Specifically, our approach outperforms vanilla GNNs on the Tree-Cycle dataset, having a higher test accuracy (plus $\sim 8\%$ on average) and less variance across different parameter initializations. We hypothesize that this effect is due to more stable and pure concepts being learnt thanks to CDM, as we will see later when discussing the concept purity scores. We do not observe any significant negative effect of using CDM on the generalization error of GNNs.
+
+
+\paragraph{The Concept Distillation Module discovers complete concepts (Table \ref{fig:accuracy})}
+Our experiments show that overall CDM discovers a more complete set of concepts w.r.t. the concept set extracted by GCExplainer on equivalent GNN architectures. This is particularly emphasized in the Tree-Grid, BA-Shapes and BA-Community datasets, where CDM significantly outperforms GCExplainer by up to $\sim 13\%$. For the other datasets, the proposed approach matches the concept completeness scores of GCExplainer. The completeness scores on the BA-Grid and Mutagenicity datasets are only slightly lower, however, within the margins of the confidence interval. In absolute terms, CDM discovers highly complete sets of concepts with completeness scores close to the model accuracy for the synthetic datasets. 
+% As there is a 1-to-1 mapping between clusters and concepts, concept completeness can be visualized as a clear separation in the node embeddings, as exemplified in \ref{fig:ba_shapes_clustering}.
+
+
+%\subsection{Concept Interpretability}
+\paragraph{The Concept Distillation Module identifies meaningful concepts (Table~\ref{tab:concept_visuals})}
+CDM discovers high-quality concepts, which are meaningful to humans. Similarly to GCExplainer, our results demonstrate that CDM can discover concepts corresponding to the ground truth motifs embedded in the toy datasets. For example, our approach recovers the ``house motif'' in BA-Shapes. Moreover, CDM proposes plausible concepts for the real-world datasets where ground truth motifs are lacking. In this case, the extracted concepts match the desirable motifs suggested by~\citet{ying2019gnnexplainer}, corresponding to ring structures and the nitrogen dioxide compound in Mutagenicity, and a star-like structure in Reddit-Binary. 
+% Figure~\ref{fig:concept_visuals} also reports for each discovered concept the corresponding binary encoding representing the concept signature learnt by the Concept Distillation Module. 
+As we use the same visualization technique as GCExplainer the merit of our contribution lies in the discovery of a more descriptive set of concepts, which includes rare and fine-grained concepts. As a thorough qualitative comparison with GCExplainer requires exhaustive visualization, we refer the reader to the Appendix for a complete set of results.
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/fine_concept_visualization.pdf}
+%     \caption{The Concept Graph Module detects concepts more fine-grained than the simple ground truth motif encoded.}
+%     \label{fig:outliers}
+% \end{figure}
+
+
+% \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/house_concepts.pdf}}
+
+% \renewcommand\conceptsizef{50}
+
+% \begin{table}[!t]
+% \resizebox{\columnwidth}{!}{%
+% \begin{tabular}{ccccc}
+% \toprule
+% \textbf{Ground Truth} & \multicolumn{2}{c}{\textbf{Fine-Grained Concepts}} & \multicolumn{2}{c}{\textbf{Rare Concepts}} \\
+% \midrule
+% \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/house_concepts.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/BA_Shapes_finegrained2.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/BA_Shapes_finegrained5.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/BA_Shapes_rare_motif17.pdf}} & \raisebox{\vfigsf}{\includegraphics[height=\conceptsizef pt]{fig/BA_Shapes_rare_motif20.pdf}} \\
+% \bottomrule\\
+% \end{tabular}%
+% }
+% \captionsetup{width=\columnwidth}
+% \caption{The Concept Distillation Module detects concepts more fine-grained than the simple ground truth motif encoded as well as rare motifs. Blue nodes are the instances being explained, while orange nodes represent their $p$-hop neighbors. Notably, GCExplainer gives no indication of rare concepts.}
+% \label{fig:rare_concepts}
+% \end{table}
+
+
+% \begin{figure}[!t]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/explanation_visualization.pdf}
+%     \caption{Visualisations of an example concept per dataset, as well as the binary concept encoding generated by the Concept Distillation Module.}
+%     \label{fig:concept_visuals}
+% \end{figure}
+
+% Figure \ref{fig:purity} visualises the minimum, maximum and median purity score of concepts extracted using our model versus those extracted from the vanilla GNN using GCExplainer. In regards to the minimum purity score, both our method and GCExplainer obtain a perfect score of 0 for the BA-Shapes and Tree-Grid dataset. Reviewing the maximum concept purity score across datasets, it can be stated that our method outperforms GCExplainer on the BA-Shapes, BA-Grid and Tree-Cycle dataset, however, performs worse on the remaining datasets. Regarding the median, it can be stated that our method and GCExplainer are of similar quality with each method extracting more pure concepts on different datasets.
+
+\paragraph{The Concept Distillation Module identifies rare and fine-grained concepts (Table~\ref{fig:rare_concepts})}
+CDM discovers more fine-grained concepts than just the ``house motif'' suggested by GNNExplainer, as it can differentiate whether a middle or bottom node is on the far or near side of the edge attaching to the BA graph. This matches the quality of concepts extracted by GCExplainer. In contrast to GCExplainer, CDM also identifies rare concepts. Rare motifs are present in toy datasets through the insertion of random edges. As the proposed approach can find the optimal number of clusters/concepts dynamically, clusters of a very small size possibly represent rare motifs. To check the presence of rare concepts, we visualize the $p$-hop neighbors of nodes found in small clusters. For example, CDM identifies a rare concept represented as a ``house'' structure attached to the BA graph via the top node of the house in the BA-Shapes dataset. This represents a rare concept as it is generated by the insertion of a random edge. We confirm this observations in other toy datasets, such as BA-Community and Tree-Cycle, where motifs with random edges are clearly identified. We have not identified rare concepts in BA-Grid or Tree-Grid, which may be attributed to the random edges being distributed within the base graph, which has a less definite structure. Due to the lack of expert knowledge, we cannot confirm whether the rare motifs found in Mutagenicity and Reddit-Binary align with human expectations.
+
+
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/outlier_visualization.pdf}
+%     \caption{Concepts corresponding to rare motifs detected by the proposed Concept Graph Module.}
+%     \label{fig:outliers}
+% \end{figure}
+
+
+
+
+%\subsection{Explanation performance}
+\paragraph{The Concept Distillation Module identifies pure concepts (Table~\ref{fig:accuracy})}
+CDM discovers high-quality concepts, which are coherent across samples, as measured by concept purity. In terms of purity, our approach discovers concepts with nearly optimal scores in toy datasets, with a graph edit distance close to zero. For these datasets, CDM provides either better or comparable purity scores when compared to GCExplainer. CDM provides slightly worse purity scores in both the Mutagenicity and Reddit-Binary datasets. However, also in this case the absolute purity of CDM is almost optimal.
+
+% \vspace{-0.5cm}
+% \begin{wrapfigure}{r}{0.6\textwidth}
+%   \begin{center}
+%     \includegraphics[width=0.6\textwidth]{fig/purity.pdf}
+%     \caption{Purity scores for the concept extracted by Concept Graph Module and GCExplainer. Notice how the optimal purity score is zero, as it measures the graph edit distance between concept instances~\citep{magister2021gcexplainer}.}
+%     \label{fig:purity}
+%     \end{center}
+% \end{wrapfigure}
+
+% \begin{minipage}{0.4\textwidth}
+% \paragraph{The Concept Distillation Module identifies pure concepts (Figure~\ref{fig:purity})}
+% CDM discovers high-quality concepts, which are coherent across samples, as measured by concept purity. In terms of purity, our approach discovers concepts with nearly optimal scores in toy datasets, with a graph edit distance close to zero. For these datasets, CDM provides either better or comparable purity scores when compared to GCExplainer. CDM provides slightly worse purity scores in both the Mutagenicity and Reddit-Binary datasets. However, also in this case the absolute purity of CDM is almost optimal.
+% \end{minipage}
+% \hspace{0.02\textwidth}
+% \begin{minipage}{0.55\textwidth}
+% % \begin{figure}[!h]
+%     \includegraphics[width=\textwidth]{fig/purity.pdf}
+%     \captionof{figure}{Purity scores for the concept extracted by Concept Graph Module and GCExplainer. Notice how the optimal purity score is zero, as it measures the graph edit distance between concept instances~\citep{magister2021gcexplainer}.}
+%     \label{fig:purity}
+% % \end{figure}
+% \end{minipage}
+
+% \paragraph{The Concept Distillation Module identifies pure concepts (Figure~\ref{fig:purity})}
+% CDM discovers high-quality concepts, which are coherent across samples, as measured by concept purity. In terms of purity, our approach discovers concepts with nearly optimal scores in toy datasets, with a graph edit distance close to zero. For these datasets, CDM provides either better or comparable purity scores when compared to GCExplainer. CDM provides slightly worse purity scores in both the Mutagenicity and Reddit-Binary datasets. However, also in this case the absolute purity of CDM is almost optimal.
+% \end{minipage}
+% \hspace{0.02\textwidth}
+% \begin{minipage}{0.55\textwidth}
+% % \begin{figure}[!h]
+%     \includegraphics[width=\textwidth]{fig/purity.pdf}
+%     \captionof{figure}{Purity scores for the concept extracted by Concept Graph Module and GCExplainer. Notice how the optimal purity score is zero, as it measures the graph edit distance between concept instances~\citep{magister2021gcexplainer}.}
+%     \label{fig:purity}
+% % \end{figure}
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=0.5\textwidth]{fig/purity.pdf}
+%     \caption{The minimum purity across concepts discovered by the proposed Concept Graph Module (CGM) and GCExplainer for an equivalent vanilla GNN.}
+%     \label{fig:purity}
+% \end{figure}
+
+\paragraph{The Concept Distillation Module provides accurate logic explanations (Table \ref{fig:lens}, Table~\ref{tab:logic_explanations})}
+LEN allows CDM to provide simple and accurate logic explanations for task predictions. The accuracy of the logic explanations extracted reaches at least $90\%$ for the BA-Shapes, BA-Grid and Tree-Cycle datasets, indicating that CDM derives a precise description of the model decision process. Relating the accuracy of explanations back to the model accuracy, we observe that the explanation accuracy is bounded by task performance, as already noticed by~\citet{ciravegna2021logic}. This explains the slightly lower logic explanation accuracy on the real-world datasets, which can be ascribed to the absence of definite ground-truth concepts and to the classification task being more complex. Besides being accurate, logic explanations are very short, with a complexity below $4$ terms. In conjunction with the explanation accuracy, this means that CDM finds a small set of predicates which accurately describes the most relevant concepts for each class. % We refer the reader to appendix \ref{appendix:homogenity} for a further evaluation on concept homogeneity.
+
+% \begin{figure*}[!h]
+%     \centering
+    
+%     % \includegraphics[width=0.8\textwidth]{fig/lens.pdf}
+%     \caption{Accuracy and complexity of logic explanations provided by the proposed Concept Graph Module. The accuracy is computed using logic formulas to classify samples based on their concept encoding. Explanation complexity measures the number of minterms in logic formulas.}
+%     \label{fig:lens}
+% \end{figure*}
+
+\begin{table}[]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lll}
+\toprule
+     & \textbf{\begin{tabular}[c]{@{}l@{}}Logic Explanation\\ Accuracy (\%)\end{tabular}} & \textbf{\begin{tabular}[c]{@{}l@{}}Logic Explanation\\ Complexity\end{tabular}} \\ \midrule
+\textbf{BA-Shapes}   & 96.56 (92.17, 100.95)                                                         & 3.10 (2.75, 3.45)                                                               \\
+\textbf{BA-Community}    & 81.43 (78.20, 84.66)                                                          & 3.85 (3.09, 4.61)                                                               \\
+\textbf{BA-Grid}     & 99.61 (98.86, 100.36)                                                         & 1.30 (0.74, 1.86)                                                               \\
+\textbf{Tree-Cycle}  & 90.49 (78.43, 102.55)                                                         & 1.90 (1.22, 2.58)                                                               \\
+\textbf{Tree-Grid}   & 89.66 (82.71, 96.62)                                                          & 2.20 (1.07, 3.33)                                                               \\
+\textbf{Mutagenicity}      & 59.94 (44.99, 74.90)                                                          & 2.60 (0.88, 4.32)                                                               \\
+\textbf{Reddit-Binary} & 71.84 (54.10, 89.59)                                                          & 1.60 (1.08, 2.12)                                                               \\ \bottomrule
+\end{tabular}%
+}
+    \caption{Accuracy and complexity of logic explanations provided by the proposed Concept Distillation Module. The accuracy is computed using logic formulas to classify samples based on their concept encoding. Explanation complexity measures the number of minterms in logic formulas.}
+    \label{fig:lens}
+\end{table}
+
+% \begin{figure}[!ht]
+%     \centering
+%     \includegraphics[width=\textwidth]{fig/formulas.pdf}
+%     \caption{An example of a concept-based logic explanations discovered by the Concept Distillation Module for each dataset.}
+%     \label{fig:logic_explanations}
+% \end{figure}
+
+% \scalerel*{\includegraphics{fig/logic_expl_graphs/BA_Shapes_concept_3.pdf}}{B}
+
+% \resizebox{\textwidth}{!}{%
+% \input{logic_expl}
+% }
+
+% \newcommand\conceptsize{20}
+% \newcommand\vfigs{-.3\height}
+% % Please add the following required packages to your document preamble:
+% % \usepackage{graphicx}
+% \begin{table*}[!h]
+% \centering
+% \renewcommand{\arraystretch}{1}
+% \resizebox{0.8\textwidth}{!}{%
+% \begin{tabular}{llll}
+% \toprule
+% \textbf{Dataset} & \textbf{Concept-based Logic Explanation} & \multicolumn{2}{l}{\textbf{Ground Turth Concepts}} \\
+% \midrule
+% \textbf{BA-Shapes} & $y =2\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Shapes_concept_3.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Shapes_concept_5.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/house.pdf}}  & \textit{Node in house motif} \\
+% \textbf{BA-Grid} & $y=1\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Grid_concept_2.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/grid.pdf}}  & \textit{Node in grid motif}  \\
+% \textbf{Tree-Grid} & $y=1\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Tree_Grid_concept_21.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Tree_Grid_concept_32.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/grid.pdf}}  & \textit{Node in grid motif} \\
+% \textbf{Tree-Cycle} & $y=1\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Tree_Cycle_concept_0.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Tree_Cycle_concept_8.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Tree_Cycle_concept_11.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/ring.pdf}}  & \textit{Node in circle motif} \\
+% \textbf{BA-Community} & $y=3\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Community_concept_29.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Community_concept_30.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/BA_Community_concept_33.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/house.pdf}}  & \textit{Node in house motif} \\
+% \textbf{Reddit-Binary} & $y =\text{``Q/A''}\rightarrow$  \raisebox{\vfigs}{\includegraphics[height=\conceptsize  pt]{fig/logic_expl_graphs/Reddit_Binary_concept_24.pdf}} OR \raisebox{\vfigs}{\includegraphics[height=\conceptsize  pt]{fig/logic_expl_graphs/Reddit_Binary_concept_27.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/star.pdf}}  & \textit{Star motifs} \\
+% \textbf{Mutagenicity} & $y =\text{``mutagenic''}\rightarrow$ \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/Mutagenicity1.pdf}} & \raisebox{\vfigs}{\includegraphics[height=\conceptsize pt]{fig/logic_expl_graphs/ring.pdf}} \raisebox{\vfigs}{\includegraphics[height=28 pt]{fig/logic_expl_graphs/no2.pdf}}  & \textit{Ring motifs or NO$_{\text{2}}$} \\
+% \bottomrule\\
+% \end{tabular}%
+% }
+% \caption{An example of a concept-based logic explanations discovered by the Concept Distillation Module per dataset. Blue nodes are the instances being explained, while orange nodes represent their $p$-hop neighbors. For Mutagenicity the color of each node represents a different chemical element. The logic formulae describe how the presence of concepts can be used to infer task labels. For example, the first logic rule states that the task label ``middle nodes in house motifs'' ($y=2$) can be inferred from the concepts: ``middle node with attaching edge on the near side'' or ``middle node with attaching edge on the far side''.}
+% \label{tab:logic_explanations}
+% \end{table*}
+
+%\subsection{Interventions}
+\paragraph{The Concept Distillation Module supports human interventions (Figure~\ref{fig:interventions})}
+Supporting human interventions is one of the main benefits of more interpretable architectures that learn tasks as a function of concepts. In contrast to vanilla GNNs, CDM enables interventions at concept-level, which allows human experts to correct mispredicted concepts. Similarly to Concept Bottleneck Models~\citep{koh2020concept}, our results show that correcting concept assignments significantly improves the model test accuracy to over $98\%$ for the synthetic datasets, achieving $100\%$ test accuracy on BA-Grid and BA-Shapes. We also observe an increase in task accuracy in BA-Community, however, the increase is much more gradual. Most notably, in both real-world datasets CDMs allow GNNs to improve their task accuracy by up to $\sim + 10\%$ with less than $10$ interventions.
+
+% % \vspace{-0.5cm}
+% \begin{figure*}[!t]
+%     \centering
+%     \includegraphics[width=0.45\textwidth]{fig/expl_intervention.pdf}
+%     \includegraphics[width=0.25\textwidth]{fig/interventions.pdf}
+%     \caption{The Concept Distillation Module supports interventions at concept-level, allowing human experts to correct mispredicted concepts (left), increasing human trust in the model~\citep{shen2022trust}. This interaction  significantly improves task performance, achieving almost $100\%$ accuracy on synthetic datasets (right).}
+%     \label{fig:interventions}
+% \end{figure*}
+
+
+
+\section{Removing Shortcuts to Concepts}
+
+
+Summary of contributions: a self-explaining GNN which explains its own predictions based on concepts learnt automatically in an unsupervised way.
+
+Summary of results: the model accuracy of the self-explaining GNN is comparable to a standard GNN. The concept purity is as high as in post-hoc methods such as GCExplainer. Motifs/subgraphs are coherent within each cluster. The learnt set of concepts is complete w.r.t. the task i.e., it is possible to accurately predict the task given the information in learnt concepts. The logic explanation accuracy is just a bit lower than model accuracy (as expected, because that's a boolean mapping). The complexity is really low ~3-4 terms which makes the explanations simple and quickly interpretable.
+
+Impact/significance: this work alleviates the problem of generating expensive concept annotations which might even be unfeasible in some fields where humans have not yet accumulated enough knowledge to allow a robust a large-scale concept annotations. So, this work has an impact on:
+
+- the concept-based and the XAI field allowing the expansion of these approaches in tackling problems where concept annotations are too scarce/expensive or not existing.
+
+- other research disciplines especially those where learning new concepts can help humans accumulate knowledge and build an ontology
+
+\section{Architectural biases}
+Next steps: scale to non-GNN models which might be tricky because in GNNs clustering works and has a strong association to motifs, while other architectures do not have such a strong bias.
+
+\section*{Papers}
+\nobibliography*
+\begin{itemize}
+    \item Steve Azzolin, Pietro Barbiero, ..., and Pietro Lio' Global GNN Interpretability via Logic Explanations. \textit{arXiv preprint arXiv:XXXX.YYYYY}, 2023
+    \item Han Xuanyuan, Pietro Barbiero, ..., and Pietro Lio' Analysing the Neurons of Graph Neural Networks: Towards Concept-Based Global Interpretability. \textit{arXiv preprint arXiv:XXXX.YYYYY}, 2023
+    \item \bibentry{magister2022encoding}
+\end{itemize}

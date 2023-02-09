@@ -3,31 +3,36 @@
 
 % \textit{In this chapter I will illustrate how concepts can be used to train interpretable models outperforming their non-interpretable equivalents in terms of raw task performance. In particular, I will focus on my contributions in inventing Concept Embedding Models (CEMs)~\citep{zarlenga2022concept} which are now the state of the art of supervised concept-based models. I will describe CEMs architectures and learning paradigms. I will also discuss how CEMs support effective human interactions through learnt concepts highlighting how these interactions can increase both model performances and human trust in the model~\citep{shen2022trust}. I will conclude the chapter demonstrating how CEMs outperform equivalent non-interpretable architectures and state-of-the-art concept-based models on synthetic and real-world datasets.}
 
+%In the previous chapter we discussed metrics to evaluate and compare different concept-based models we introduced in Chapter~\ref{chapter:background}. In particular we used these metrics to identify the main weaknesses of state-of-the-art concept-based models. 
+
+
 % \section{Motivation}
-\textbf{Motivation}---In the previous chapter we discussed metrics to evaluate and compare different concept-based models we introduced in Chapter~\ref{chapter:background}. In particular we used these metrics to identify the main weaknesses of state-of-the-art concept-based models. In this chapter we are going to focus on one of the main weaknesses we identified in Concept Bottleneck Models (CBMs): the accuracy VS explainability trade off. Recalling from the previous chapter, this kind of issue is one of the key concerns in state-of-the-art explainable-by-design models as they often struggle to provide a good compromise between the accuracy of their predictions and the quality of their explanations. State-of-the-art CBMs do not escape this doom as they either provide high task performance (accuracy) or high concept alignment (interpretability) when solving challenging problems:
-%\begin{figure}[h]
+\textbf{Motivation}---In the previous chapter we discussed how to design the architecture of neural networks to allow the extraction of simple logic explanations. While logic explained networks represent a significant advantage over other XAI methods being explainable by design, they are still subject to the accuracy-explainability trade-off. This trade-off represents the main limitation of all concept-based models and is mostly affected by the choice of concepts and quality of concept representations.
+%In this chapter we address
+%are going to focus on one of the main weaknesses we identified in Concept Bottleneck Models (CBMs): 
+%the accuracy VS explainability trade off. 
+%Recalling from the previous chapter, 
+This kind of issue is one of the key concerns in state-of-the-art explainable-by-design models as they often struggle to provide a good compromise between the accuracy of their predictions and the quality of their explanations. State-of-the-art Concept-Bottleneck Models (CBMs,~\cite{koh2020concept}) do not escape this doom as they either provide high task performance (accuracy) or high concept alignment (interpretability) when solving challenging problems.
+\begin{figure}[H]
 %\includegraphics[width=\textwidth]{}
-%\caption{Accuracy VS explainability trade off in Concept Bottleneck Models (CBMs). Traditional CBMs struggle to find a good compromise between task accuracy and explainability. The red star at the top right marks the optimal compromise.}
-%\label{fig:cbm_tradeoff}
-%\end{figure}
-
-On top of this issue, CBMs also struggle in real-world conditions where concept supervisions are scarce and noisy. In these scenarios, these models struggle in reaching high task accuracy as the set of concepts might not hold enough information to solve the task (see Figure~\ref{fig:cbm_real_world}). This problem is known as ``concept incompleteness'' and might heavily affect the deployment standard CBMs:
-%\begin{figure}[h]
+\caption{Accuracy VS explainability trade off in Concept Bottleneck Models (CBMs). Traditional CBMs struggle to find a good compromise between task accuracy and explainability. The red star at the top right marks the optimal compromise.}
+\label{fig:cbm_tradeoff}
+\end{figure}
+On top of this issue, CBMs also struggle in real-world conditions where concept supervisions are scarce and noisy. In these scenarios, these models struggle in reaching high task accuracy as the set of concepts might not hold enough information to solve the task (see Figure~\ref{fig:cbm_real_world}). This problem is known as ``concept incompleteness'' and might heavily affect the deployment standard CBMs.
+\begin{figure}[H]
 %\includegraphics[width=\textwidth]{}
-%\caption{Real-world conditions (e.g., concept incompleteness and noisy supervisions) impair Concept Bottleneck Models (CBMs) task accuracy. As concept supervisions available for training are reduced, the task accuracy drops dramatically.}
-%\label{fig:cbm_real_world}
-%\end{figure}
-
-To overcome this limitation, \citet{mahinpei2021promises} proposed to augment the learning capacity of CBMs by introducing extra neurons at concept level whithout imposing any direct concept supervision on their activations. This solution (a.k.a. ``hybrid CBMs'') allows the model to efficiently solve tasks even in noisy and concept-incomplete settings. However, this performance improvement comes with a cost: test-time concept interventions become ineffective (see Figure~\ref{fig:hybrid_interventions}):
-%\begin{figure}[h]
+\caption{Real-world conditions (e.g., concept incompleteness and noisy supervisions) impair Concept Bottleneck Models (CBMs) task accuracy. As concept supervisions available for training are reduced, the task accuracy drops dramatically.}
+\label{fig:cbm_real_world}
+\end{figure}
+To overcome this limitation, \citet{mahinpei2021promises} proposed to augment the learning capacity of CBMs by introducing extra neurons at concept level whithout imposing any direct concept supervision on their activations. This solution (a.k.a. ``hybrid CBMs'') allows the model to efficiently solve tasks even in noisy and concept-incomplete settings. However, this performance improvement comes with a cost: test-time concept interventions become ineffective (see Figure~\ref{fig:hybrid_interventions}).
+\begin{figure}[H]
 %\includegraphics[width=\textwidth]{}
-%\caption{Concept interventions are ineffective in hybrid CBMs.}
-%\label{fig:hybrid_interventions}
-%\end{figure}
-
+\caption{Concept interventions are ineffective in hybrid CBMs.}
+\label{fig:hybrid_interventions}
+\end{figure}
 This suggests that hybrid CBMs are prone to the phenomenon known as ``shortcut learning'': task performance is independent from concept activations as it relies mostly on the unsupervised extra neurons. This result demonstrates that hybrid CBMs cannot provide reliable concept-based explanations for task predictions nor they can effectively interact with human experts through the learnt concepts.
 
-\textbf{Solution}---To fill these knowledge gaps, in this chapter we will present Concept Embedding Models (CEMs,~\citep{zarlenga2022concept}), a novel class of CBMs aiming at:
+\textbf{Solution}---To fill this knowledge gap, in this chapter we will present Concept Embedding Models (CEMs,~\citep{zarlenga2022concept}), a novel class of CBMs aiming at:
 \begin{itemize}
 	\item breaking the accuracy VS explainability trade off in CBMs;
 	\item scaling CBMs to real-world conditions where concept supervisions are scarce and noisy;

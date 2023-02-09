@@ -33,8 +33,9 @@ As the interest for XAI methods rises inside and outside academic environments, 
     \item formalize key XAI notions for the first time;
     \item set the scene and motivate the work of the next chapters.
 \end{itemize}
-The \textbf{key innovation} of this chapter is the use of category theory which represents now the standard formalism for many mathematical disciplines, including algebra~\cite{eilenberg1945general}, geometry~\cite{bredon2012sheaf}, logic~\cite{johnstone2014topos}, computer science~\cite{goguen1992institutions}, and more recently machine learning~\cite{cruttwell2022categorical,ong2022learnable}.
-In fact, category theory provides a sound and abstract formalism to study general structures and systems of structures, focusing on their very essence. A great advantage to avoid contingent details and focus on what really matters. This is why in this work we decided to describe XAI notions using this formal language.
+The \textbf{key innovation} of this chapter is the use of categorical structures to formalize XAI notions and processes.
+We use category theory as it provides a sound and abstract formalism to study general structures and systems of structures, avoiding contingent details and focusing on their very essence. For this reason, category theory represents now the standard formalism of many mathematical disciplines, including algebra~\cite{eilenberg1945general}, geometry~\cite{bredon2012sheaf}, logic~\cite{johnstone2014topos}, computer science~\cite{goguen1992institutions}, and more recently machine learning~\cite{cruttwell2022categorical,ong2022learnable}.
+%This is why in this work we decided to describe XAI notions using this formal language.
 
 In this chapter we set the scene for the next chapters defining the key notions and presenting the notation we will follow in the rest of this work in the language of category theory. We will first discuss the basic elements of category theory analyzing the main categorical structures we will use in the following chapters (Section~\ref{sec:pre}). We will then use such categories to formally define the syntax and the semantics of explainable AI agents and notions (Section~\ref{sec:framework} and~\ref{sec:syExp}). Among available semantics, we will focus on the human-friendly semantics based on concept learning (Section~\ref{sec:concept-learning}). Finally, we will present the main knowledge gaps in concept learning which motivate the next chapters (Section~\ref{sec:gaps-concept-learning}).
 
@@ -68,12 +69,12 @@ Categories provide a syntax for processes that can be composed \emph{sequentiall
     Composition needs to be associative, i.e. there is no ambiguity in writing \(f \dcomp g \dcomp h\), and unital, i.e. \(f \dcomp \id{Y} = f = \id{X} \dcomp f\).
     % (\Cref{fig:category-string-diagrams}, bottom).
 \end{definition}
-\begin{figure}[h!]
-    \centering
+%\begin{figure}[h!]
+%    \centering
     $\sequentialFig{}$ \qquad \(\identityXFig\)\\[4pt]
     \compositionUnitalFig{}
     % \caption{String diagrams for the composition of two morphisms (top, left), the identity morphism (top, right), and the unitality condition (bottom).}\label{fig:category-string-diagrams}
-\end{figure}
+%\end{figure}
 A mapping between two categories $\cat{C}_1$ and $\cat{C}_2$ that preserves compositions and identities is called a \emph{functor} and maps objects and morphisms of $\cat{C}_1$ into objects and morphisms of $\cat{C}_2$.
 
 % A \emph{category} consists of a class of \emph{objects} $\mathcal{O}$ and a class of \emph{morphisms} $\mathcal{H}$.
@@ -87,12 +88,12 @@ Monoidal categories~\cite{maclane78} are categories endowed with extra structure
 The monoidal product is a functor \(\tensor \colon \cat{C} \times \cat{C} \to \cat{C}\) that associates to two processes, \(f_1 \colon X_1 \to Y_1\) and \(f_2 \colon X_2 \to Y_2\), their parallel composition \(f_1 \tensor f_2 \colon X_1 \tensor X_2 \to Y_1 \tensor Y_2\) (\Cref{fig:string-diagrams-monoidal-cat}, right).
 The monoidal unit is an object \(\monoidalunit \in \obj{\cat{C}}\).
 A monoidal category is \emph{symmetric} if there is a morphism \(\swap{X,Y} \colon X \tensor Y \to Y \tensor X\), for any two objects \(X\) and \(Y\), called the \emph{symmetry}.
-\begin{figure}[h!]
-    \centering
+%\begin{figure}[h!]
+%    \centering
     $\morphismManyWiresFig{} \qquad \parallelFig{} \qquad \swapXYFig{X}{Y}$
     % \caption{A morphism with multiple inputs and outputs (left), the parallel composition of two morphisms (center), and the symmetry (right) in a monoidal category.}
-    \label{fig:string-diagrams-monoidal-cat}
-\end{figure}
+%    \label{fig:string-diagrams-monoidal-cat}
+%\end{figure}
 A symmetric monoidal structure on a category is required to satisfy some coherence conditions \cite{maclane78} (see~\Cref{app:mon-cat} for more details), which ensure that string diagrams are a sound and complete syntax for symmetric monoidal categories \cite{joyal1991geometry}. 
 Like functors are mappings between categories that preserve their structure, \emph{symmetric monoidal functors} are mappings between symmetric monoidal categories that preserve the structure and axioms of symmetric monoidal categories.
 
@@ -101,11 +102,11 @@ Some symmetric monoidal categories have the additional property of allowing reso
 These are called \emph{Cartesian categories}.
 A monoidal category \(\cat{C}\) is Cartesian whenever there are two morphisms, the copy \(\cp_X \colon X \to X \times X\) and the discard \(\discard_X \colon X \to 1\) (\Cref{fig:copy-discard}), that commute with all morphisms in \(\cat{C}\)~\cite{fox76} (see~\Cref{app:cat} for details).
 When a monoidal category is Cartesian, it is customary to indicate with \(\times\) the monoidal product given by the Cartesian structure, and with \(1\) the corresponding monoidal unit. 
-\begin{figure}[h!]
+%\begin{figure}[h!]
     \[\copyXFig{} \qquad \qquad \discardXFig{}\]
     % \caption{The copy and discard morphisms in a Cartesian category.}
-    \label{fig:copy-discard}
-\end{figure}
+%    \label{fig:copy-discard}
+%\end{figure}
 
 
 %\paragraph{Monoidal category}
@@ -713,9 +714,9 @@ The same concept can have different representations depending on its intent $\mc
 Consider the concept ``house'' for a single sample described using different attributes i.e., pixels (image), node neighbors (graph), or labels (table):
 \begin{figure}[H]
     \centering
-    \includegraphics{image_concept.pdf}
-    \includegraphics{graph_concept.pdf}
-    \includegraphics{label_concept.pdf}
+%    \includegraphics{image_concept.pdf}
+%    \includegraphics{graph_concept.pdf}
+%    \includegraphics{label_concept.pdf}
     % \caption{input matrix: segment of image (subset of pixels), adjacency matrix: motif of graph (subset of nodes and edges), label matrix: a rectangle with a non-zero elements of the table (subset of rows and columns)}
     \label{fig:my_label}
 \end{figure}

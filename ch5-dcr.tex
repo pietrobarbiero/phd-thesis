@@ -1,13 +1,28 @@
 \chapter{Interpretable Concept Reasoning}
 \label{chapter:DCR}
 
-\textbf{Motivation---} If explanations do not match model predictions we have a mismatch and a drop of fidelity. This drop of fidelity induces a drop in human understanding and trust.
+%\begin{itemize}
+%	\item concept embeddings allow cbms to attain sota performance while keeping the semantics of concepts intact
+%	\item however, existing interpretable concept-based models are not designed for concept embeddings
+%	\item as a result, cbms applied on concept embeddings may generate explanations that are no longer semantically meaningful
+%	\item as a consequence standard cbms on concept embeddings may not be trustworthy as much as cbms on concept truth values
+%	\item to overcome this limitation we propose dcr, the first interpretable cbm using concept embeddings
+%	\item key innovation: use neural networks to generate logic rules from concept embeddings and execute the rules using concept truth values
+%	\item this way neural networks can exploit the whole information in the embeddings to build compound logic expressions while logic inference is used to make predictions on downstream tasks based on the rules and thus being totally interpretable
+%\end{itemize}
 
-\textbf{Solution---} an interpretable concept-based model using concept embeddings.
+\textbf{Motivation---} As we illustrated in the previous chapter, concept embeddings are a powerful concept representation as they allow concept-based models to attain state-of-the-art task performance while keeping intact the semantics of concepts. In fact, high-dimensional embeddings allow concept encoders to incorporate additional information coming from the input space which might be specific to each sample. Concept-based models can then leverage this extra information to make task predictions more accurate by considering instance-specific conditions. However, existing concept-based models are not designed to deal efficiently with concept embeddings. In fact, existing concept-based models always assume that all their input features are semantically meaningful. This way these models can leverage concept semantics to generate meaningful explanations. However, concept embeddings break this assumption as the individual features of the embedding do not have an explicit semantics. For this reason, even the most interpretable concept-based models fail to provide meaningful explanations when applied on concept embeddings.
 
-The \textbf{key innovation} of this chapter is using neural networks to generate interpretable rules.
+% the only semantically explicit information is encoded in concept truth-values.
+
+\textbf{Solution---} To fill this gap, in this chapter we introduce the Deep Concept Reasoner (DCR) the first interpretable concept-based model using concept embeddings. In particular DCR represents the first differentiable concept-based model attaining state-of-the-art performance in solving complex tasks, thanks to concept embeddings, while providing human-understandable and formal explanations for its decisions, thus representing a concrete step towards efficient and trustworthy AI systems.
+
+The \textbf{key innovation} of DCR is the use of neural networks to generate interpretable rules. In particular, DCR generates the structure of logic rules whose terms are concept literals. To build these rules, DCR uses concept embeddings which allow DCR to customize logic expressions for different input samples as embeddings may hold instance-specific contextual information. Having generated the logic rule, DCR then executes the logic expression evaluating concept literals on the semantically meaningful concept truth degrees.
+
+In this chapter we will first present the syntax, the semantics and the architecture of the Deep Concept Reasoner (Section~\ref{sec:dcr-method}). We will then show how DCR outperforms existing interpretable models while provide simple logic explanations (Section~\ref{sec:dcr-exp}). Finally we will discuss how DCR and concept embeddings represent a significant innovation in the context of explainable and neural-symbolic AI (Section~\ref{sec:dcr-disc}).
 
 \section{Deep Concept Reasoning}
+\label{sec:dcr-method}
 % \subsection{Goal: Interpretable Model with Top Performances}
 Here we describe the ``Deep Concept Reasoner'' (DCR, Figure~\ref{fig:dcr-method}), the first interpretable concept-based model based on concept embeddings.  Similarly to existing models based on concept embeddings, DCR exploits high dimensional representations of the concepts. However, in DCR, such representations are only used to compute a logic rule. The final prediction is then obtained by evaluating such rule on the concepts truth values and not on their embeddings, thus maintaining a clear semantics and providing a totally interpretable decision. 
 %DCR learns logic rules by composing concept literals into a logical formula identifying relevant literals using concept embeddings. 
@@ -40,9 +55,9 @@ In the following section, we describe \mbox{(1) the} syntax of the rules we aim 
     %     \caption{$y=x$}
     %     \label{fig:y equals x}
     % \end{subfigure}
-    \includegraphics[clip, trim=0.4cm 0cm 7cm 0cm, width=0.22\textwidth]{figs/dcr_method_simple.pdf}
-    \qquad
-    \includegraphics[clip, trim=0cm 0cm 2.9cm 0cm, width=0.62\textwidth]{figs/dcr_method_horizontal.pdf}
+%    \includegraphics[clip, trim=0.4cm 0cm 7cm 0cm, width=0.22\textwidth]{figs/dcr_method_simple.pdf}
+%    \qquad
+%    \includegraphics[clip, trim=0cm 0cm 2.9cm 0cm, width=0.62\textwidth]{figs/dcr_method_horizontal.pdf}
     \caption{(left) Deep Concept Reasoner (DCR) generates fuzzy logic rules using neural models on concept embeddings. Then DCR executes the rule using the concept truth degrees to evaluate the rule symbolically. (right) Schema of DCR modules: first neural models $\phi$ and $\psi$ generate the rule, and then the rule is executed symbolically.}
     \label{fig:dcr-method}
 \end{figure*}
@@ -413,7 +428,7 @@ In DCR we extract simple counter-examples $x^\star$ using the logic rule as guid
 
 
 \section{Experiments}
-\label{sec:exp}
+\label{sec:dcr-exp}
 
 \subsection{Research Questions}
 In this section, we analyze the following research questions:
@@ -429,7 +444,7 @@ In this section, we analyze the following research questions:
 
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=0.98\linewidth]{figs/results_auc.pdf}
+%    \includegraphics[width=0.98\linewidth]{figs/results_auc.pdf}
     \caption{Mean ROC AUC for task predictions for all baselines across all tasks (the higher the better). DCR often outperforms interpretable concept-based models. \emph{CE} stands for concept embeddings, while \emph{CT} for concept truth degrees. Models trained on concept embeddings are not interpretable as concept embeddings lack a clear semantic for individual embedding dimensions.
     % We report the mean and $95\%$ CI of the task's ROC AUC.
     %\todo{Change to Concept Embedding+X and Concept Scores+X because we don't always use CEM or CBM}
@@ -600,7 +615,13 @@ DCR(ours) & $97.4 \pm 0.2$ \\ \hline
 \subsection{Interpretability}
 \paragraph{DCR discovers semantically meaningful logic rules (Table~\ref{tab:global-rules})}
 Our experiments show that DCR induces logic rules that are both accurate in predicting the task and formally correct when compared to ground-truth logic rules. We evaluate the formal correctness of DCR rules on the \emph{XOR}, \emph{Trigonometry}, and \emph{MNIST-Addition} datasets where we have access to ground-truth logic rules. We report a selection of Booleanized DCR rules with the corresponding ground truth rules in Table~\ref{tab:global-rules}. 
-Our results indicate that DCR's rules align with human-designed ground truth rules, making them highly interpretable. For instance, DCR predicts that the sum of two MNIST digits is $17$ if either the first image is a \includegraphics[scale=0.4]{figs/img_9.jpg} (i.e., $c'_9$) and the second is an \includegraphics[scale=0.4]{figs/img_8.jpg} (i.e., $c''_8$) or vice-versa which we can interpret globally using Equation~\ref{eq:global-explanation} as: $y_{17} \Leftrightarrow (c'_9 \land  c''_8) \vee (c'_8 \land  c''_9)$. We list all logic rules discovered by DCR on the \emph{MNIST-Addition} dataset in Appendix~\ref{app:mnist}.
+Our results indicate that DCR's rules align with human-designed ground truth rules, making them highly interpretable. For instance, DCR predicts that the sum of two MNIST digits is $17$ if either the first image is a 
+%\includegraphics[scale=0.4]{figs/img_9.jpg} (i.e., $c'_9$) 
+``9''
+and the second is an 
+%\includegraphics[scale=0.4]{figs/img_8.jpg} (i.e., $c''_8$)
+``8''
+ or vice-versa which we can interpret globally using Equation~\ref{eq:global-explanation} as: $y_{17} \Leftrightarrow (c'_9 \land  c''_8) \vee (c'_8 \land  c''_9)$. We list all logic rules discovered by DCR on the \emph{MNIST-Addition} dataset in Appendix~\ref{app:mnist}.
 It is interesting to investigate the potential of DCR also in settings where we do not have access to the ground-truth logic rules, such as the \emph{Mutagenicity} dataset. Here, unlike the \textit{MNIST addition} dataset, not only
 there is no supervision on the concepts, but we don't even know which are the concepts.
 We use GCExplainer~\cite{magister2021gcexplainer} to generate a set of concepts embeddings from the embeddings of a trained GNN. We then use these embeddings to train DCR.
@@ -669,14 +690,14 @@ As highlighted in Figure \ref{fig:sensitivity}, in all datasets the explanations
 
 \begin{figure}[t]
     \centering
-    \includegraphics[trim=0 0 0 0, clip, width=0.9\columnwidth]{figs/counterfactual/results_sensitivity.pdf}
+%    \includegraphics[trim=0 0 0 0, clip, width=0.9\columnwidth]{figs/counterfactual/results_sensitivity.pdf}
     \caption{Sensitivity of model explanation when changing the radius of the input perturbation. The lower, the better. DCR explanations engender trust as they are stable under small perturbations of the input. The same does not hold generally for LIME explanations of XGBoost or Relu Net decision rules.}
     \label{fig:sensitivity}
 \end{figure}
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=.965\columnwidth]{figs/counterfactual/results_counterfactuals.pdf}
+%    \includegraphics[width=.965\columnwidth]{figs/counterfactual/results_counterfactuals.pdf}
     \caption{Model confidence as a function of the number of perturbed features on counterfactual examples. The lower, the better. Similarly to interpretable methods, DCR prediction confidence quickly drops after inverting the truth degree of a small set of relevant concepts, facilitating the discovery of counterfactual examples. }
     \label{fig:counterfactuals}
 \end{figure}
@@ -758,7 +779,7 @@ Local explainers such as LIME can only partially explain the decision process of
 
 
 \section{Key Findings \& Significance}
-\label{sec:disc}
+\label{sec:dcr-disc}
 \paragraph{Relations with the state-of-the-art}
 Interpretable concept-based models~\cite{koh2020concept} address the lack of human trust in AI systems as they allow their users to understand their decision process~\cite{rudin2019stop}.
 % and to improve their performance by controlling and interacting with the learnt concepts~\cite{shen2022trust}. 
